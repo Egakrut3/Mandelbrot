@@ -14,104 +14,132 @@ static void glfw_error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
-static GLsizei	ScreenWidth		= 0,
-				ScreenHeight	= 0;
-static void get_ScreenSize_callback(GLFWwindow *window, GLsizei Width, GLsizei Height) {
-	if (callback_done) { return; }
-
-	ScreenWidth		= Width;
-	ScreenHeight	= Height;
-	callback_done	= 1;
-}
-
-static void wait_resize_callback(GLFWwindow *window, GLsizei Width, GLsizei Height) {
+static void wait_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 	if (callback_done) { return; }
 
 	callback_done = 1;
 }
 
-#define StartWidth	800
-#define StartHeight	600
+#define glfw_await_MaximizeWindow(win)			\
+do {											\
+	callback_done = 0;							\
+	glfwMaximizeWindow(win);					\
+	if (!callback_done) { glfwWaitEvents(); }	\
+} while (false)
+
+#define glfw_await_RestoreWindow(win)			\
+do {											\
+	callback_done = 0;							\
+	glfwRestoreWindow(win);						\
+	if (!callback_done) { glfwWaitEvents(); }	\
+} while (false)
+
+#define glfw_await_SetWindowSize(win, w, h)		\
+do {											\
+	callback_done = 0;							\
+	glfwSetWindowSize(win, w, h);				\
+	if (!callback_done) { glfwWaitEvents(); }	\
+} while (false)
+
+#define start_w	800
+#define start_h	600
 
 int run_Mandelbrot() {
 	if (!glfwInit()) { return GLFW_FAILED_TO_INIT; }
 	glfwSetErrorCallback(glfw_error_callback);
 
-	GLFWwindow *window = glfwCreateWindow(StartWidth, StartHeight, "GLFW Test", nullptr, nullptr);
-	if (!window) { glfwTerminate(); return GLFW_FAILED_TO_CREATE_WINDOW; }
+	GLFWwindow *win = glfwCreateWindow(start_w, start_h, "Mandelbrot", nullptr, nullptr);
+	if (!win) { glfwTerminate(); return GLFW_FAILED_TO_CREATE_WINDOW; }
+	glfwMakeContextCurrent(win);
+	glfwSetFramebufferSizeCallback(win, wait_resize_callback);
 
-	GLFWframebuffersizefun prev_callback = glfwSetFramebufferSizeCallback(window, get_ScreenSize_callback);
-	callback_done = 0;
-	glfwMaximizeWindow(window);
-	if (!callback_done) {
-		glfwWaitEvents();
-	}
-	fprintf(stderr, "Width = %d, Height = %d\n", ScreenWidth, ScreenHeight);
-	
-	glfwSetWindowSizeLimits(window, GLFW_DONT_CARE, GLFW_DONT_CARE, ScreenWidth, ScreenHeight);
-	glfwSetFramebufferSizeCallback(window, wait_resize_callback);
-	callback_done = 0;
-	glfwSetWindowSize(window, StartWidth, StartHeight);
-	if (!callback_done) {
-		glfwWaitEvents();
-	}
 
-	glfwSetFramebufferSizeCallback(window, prev_callback);
 
+	glfw_await_MaximizeWindow(win);
+	GLsizei	max_win_w = 0,
+			max_win_h = 0;
+	glfwGetWindowSize(win, &max_win_w, &max_win_h);
+	glfwSetWindowSizeLimits(win, GLFW_DONT_CARE, GLFW_DONT_CARE, max_win_w, max_win_h);
+
+	GLsizei	max_buff_w = 0,
+			max_buff_h = 0;
+	glfwGetFramebufferSize(win, &max_buff_w, &max_buff_h);
 	GLubyte *pixels = nullptr;
-	pixels = (typeof pixels)calloc(ScreenWidth * ScreenHeight * 4, sizeof *pixels);
+	pixels = (typeof pixels)calloc(max_buff_w * max_buff_h * 4, sizeof *pixels);
 	assert(pixels);
 
-	glfwMakeContextCurrent(window);
+	glfw_await_RestoreWindow(win);
+	glfw_await_SetWindowSize(win, start_w, start_h);
+	fprintf(stderr,	"max_win_w = %d,	max_win_h = %d\n"	"max_buff_w = %d,	max_buff_h = %d\n",
+									max_win_w,			max_win_h,			max_buff_w, 		max_buff_h);
 
-	GLsizei CurWidth	= 0,
-			CurHeight	= 0;
-	glfwGetFramebufferSize(window, &CurWidth, &CurHeight);
-	for (size_t y = 0; y < CurHeight; y++) {
-		for (size_t x = 0; x < CurWidth; x++) {
-			size_t ind = (y * CurWidth + x) * 4;
+
+
+	GLsizei	cur_win_w = 0,
+			cur_win_h = 0;
+	glfwGetWindowSize(win, &cur_win_w, &cur_win_h);
+
+	GLsizei	cur_buff_w = 0,
+			cur_buff_h = 0;
+	glfwGetFramebufferSize(win, &cur_buff_w, &cur_buff_h);
+	for (size_t y = 0; y < cur_buff_h; y++) {
+		for (size_t x = 0; x < cur_buff_w; x++) {
+			size_t ind = (y * cur_buff_w + x) * 4;
 			pixels[ind + 0] = x & 0xFF;
 			pixels[ind + 1] = y & 0xFF;
 			pixels[ind + 2] = (x + y) & 0xFF;
 			pixels[ind + 3] = 0xFF;
 		}
 	}
+	glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1); // TODO
 
-	fprintf(stderr, "Width = %d, Height = %d\n", CurWidth, CurHeight);
-	while (!glfwWindowShouldClose(window)) {
-		GLsizei	NewWidth	= 0,
-				NewHeight	= 0;
-		glfwGetFramebufferSize(window, &NewWidth, &NewHeight);
-		if (NewWidth != CurWidth or NewHeight != CurHeight) {
-			CurWidth	= NewWidth;
-			CurHeight	= NewHeight;
+	fprintf(stderr,	"cur_win_w = %d,	cur_win_h = %d\n"	"cur_buff_w = %d,	cur_buff_h = %d\n",
+									cur_win_w, 			cur_win_h,			cur_buff_w,			cur_buff_h);
 
-			for (size_t y = 0; y < CurHeight; y++) {
-				for (size_t x = 0; x < CurWidth; x++) {
-					size_t ind = (y * CurWidth + x) * 4;
+
+
+	while (!glfwWindowShouldClose(win)) {
+		GLsizei	new_win_w = 0,
+				new_win_h = 0;
+		glfwGetWindowSize(win, &new_win_w, &new_win_h);
+		new_win_w = new_win_w <= max_win_w ? new_win_w : max_win_w;
+		new_win_h = new_win_h <= max_win_h ? new_win_h : max_win_h;
+		if (new_win_w != cur_win_w or
+			new_win_h != cur_win_h) {
+			glfw_await_SetWindowSize(win, new_win_w, new_win_h);
+			GLsizei	new_buff_w = 0,
+					new_buff_h = 0;
+			glfwGetFramebufferSize(win, &new_buff_w, &new_buff_h);
+
+			fprintf(stderr,	"new_win_w = %d,	new_win_h = %d\n"	"new_buff_w = %d,	new_buff_h = %d\n",
+											new_win_w, 			new_win_h,			new_buff_w,			new_buff_h);
+
+			cur_win_w 	= new_win_w;
+			cur_win_h	= new_win_h;
+	
+			cur_buff_w	= new_buff_w;
+			cur_buff_h	= new_buff_h;
+			for (size_t y = 0; y < cur_buff_h; y++) {
+				for (size_t x = 0; x < cur_buff_w; x++) {
+					size_t ind = (y * cur_buff_w + x) * 4;
 					pixels[ind + 0] = x & 0xFF;
 					pixels[ind + 1] = y & 0xFF;
 					pixels[ind + 2] = (x + y) & 0xFF;
 					pixels[ind + 3] = 0xFF;
 				}
 			}
+			glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1);
 		}
 		
-		glViewport(0, 0, CurWidth, CurHeight);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, CurWidth, 0, CurHeight, -1, 1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glRasterPos2i(0, 0);
-		glDrawPixels(CurWidth, CurHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-		glfwSwapBuffers(window);
+		glDrawPixels(cur_buff_w, cur_buff_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glFinish();
+		glfwSwapBuffers(win);
 
 		glfwPollEvents();
 	}
 
 	free(pixels);
-	glfwDestroyWindow(window);
+	glfwDestroyWindow(win);
 	glfwTerminate();
 	return 0;
 }
