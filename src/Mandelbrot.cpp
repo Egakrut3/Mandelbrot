@@ -93,8 +93,9 @@ int run_Mandelbrot() {
 
 
 
-	double last_rep_time = glfwGetTime();
-	size_t cnt_frames = 0;
+	double	frm_beg_time	= glfwGetTime(),
+			FPS				= 0;
+	char FPS_title[16] = "";
 	while (!glfwWindowShouldClose(win)) {
 		GLsizei	new_win_w = 0,
 				new_win_h = 0;
@@ -125,14 +126,12 @@ int run_Mandelbrot() {
 		
 		glDrawPixels(cur_buff_w, cur_buff_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		glfwSwapBuffers(win);
-		cnt_frames++;
 
 		double cur_time = glfwGetTime();
-		if (cur_time - last_rep_time >= 1) {
-			fprintf(stderr, "FPS: %zu\n", cnt_frames);
-			last_rep_time = cur_time;
-			cnt_frames = 0;
-		}
+		FPS = FPS * 0.9 + 0.1 / (cur_time - frm_beg_time);
+		frm_beg_time = cur_time;
+		snprintf(FPS_title, 16, "FPS: %.2f", FPS);
+		glfwSetWindowTitle(win, FPS_title);
 
 		glfwPollEvents();
 	}
