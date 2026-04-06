@@ -35,9 +35,6 @@ static void wait_resize_callback(GLFWwindow *window, GLsizei Width, GLsizei Heig
 
 int run_Mandelbrot() {
 	if (!glfwInit()) { return GLFW_FAILED_TO_INIT; }
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 	glfwSetErrorCallback(glfw_error_callback);
 
 	GLFWwindow *window = glfwCreateWindow(StartWidth, StartHeight, "GLFW Test", nullptr, nullptr);
