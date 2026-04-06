@@ -70,8 +70,6 @@ int run_Mandelbrot() {
 
 	glfw_await_RestoreWindow(win);
 	glfw_await_SetWindowSize(win, start_w, start_h);
-	fprintf(stderr,	"max_win_w = %d,	max_win_h = %d\n"	"max_buff_w = %d,	max_buff_h = %d\n",
-									max_win_w,			max_win_h,			max_buff_w, 		max_buff_h);
 
 
 
@@ -91,10 +89,7 @@ int run_Mandelbrot() {
 			pixels[ind + 3] = 0xFF;
 		}
 	}
-	glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1); // TODO
-
-	fprintf(stderr,	"cur_win_w = %d,	cur_win_h = %d\n"	"cur_buff_w = %d,	cur_buff_h = %d\n",
-									cur_win_w, 			cur_win_h,			cur_buff_w,			cur_buff_h);
+	glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1);
 
 
 
@@ -107,18 +102,13 @@ int run_Mandelbrot() {
 		if (new_win_w != cur_win_w or
 			new_win_h != cur_win_h) {
 			glfw_await_SetWindowSize(win, new_win_w, new_win_h);
-			GLsizei	new_buff_w = 0,
-					new_buff_h = 0;
-			glfwGetFramebufferSize(win, &new_buff_w, &new_buff_h);
 
-			fprintf(stderr,	"new_win_w = %d,	new_win_h = %d\n"	"new_buff_w = %d,	new_buff_h = %d\n",
-											new_win_w, 			new_win_h,			new_buff_w,			new_buff_h);
 
-			cur_win_w 	= new_win_w;
-			cur_win_h	= new_win_h;
-	
-			cur_buff_w	= new_buff_w;
-			cur_buff_h	= new_buff_h;
+
+			cur_win_w = new_win_w;
+			cur_win_h = new_win_h;
+
+			glfwGetFramebufferSize(win, &cur_buff_w, &cur_buff_h);
 			for (size_t y = 0; y < cur_buff_h; y++) {
 				for (size_t x = 0; x < cur_buff_w; x++) {
 					size_t ind = (y * cur_buff_w + x) * 4;
