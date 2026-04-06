@@ -14,9 +14,9 @@ static void glfw_error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
-static int	ScreenWidth		= 0,
-			ScreenHeight	= 0;
-static void get_ScreenSize_callback(GLFWwindow *window, int Width, int Height) {
+static GLsizei	ScreenWidth		= 0,
+				ScreenHeight	= 0;
+static void get_ScreenSize_callback(GLFWwindow *window, GLsizei Width, GLsizei Height) {
 	if (callback_done) { return; }
 
 	ScreenWidth		= Width;
@@ -24,7 +24,7 @@ static void get_ScreenSize_callback(GLFWwindow *window, int Width, int Height) {
 	callback_done	= 1;
 }
 
-static void wait_resize_callback(GLFWwindow *window, int Width, int Height) {
+static void wait_resize_callback(GLFWwindow *window, GLsizei Width, GLsizei Height) {
 	if (callback_done) { return; }
 
 	callback_done = 1;
@@ -35,10 +35,11 @@ static void wait_resize_callback(GLFWwindow *window, int Width, int Height) {
 
 int run_Mandelbrot() {
 	if (!glfwInit()) { return GLFW_FAILED_TO_INIT; }
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 	glfwSetErrorCallback(glfw_error_callback);
 
-	GLFWmonitor *monitor = glfwGetPrimaryMonitor();
-	GLFWvidmode const *mode = glfwGetVideoMode(monitor);
 	GLFWwindow *window = glfwCreateWindow(StartWidth, StartHeight, "GLFW Test", nullptr, nullptr);
 	if (!window) { glfwTerminate(); return GLFW_FAILED_TO_CREATE_WINDOW; }
 
@@ -60,20 +61,14 @@ int run_Mandelbrot() {
 
 	glfwSetFramebufferSizeCallback(window, prev_callback);
 
-	unsigned char *pixels = nullptr;
+	GLubyte *pixels = nullptr;
 	pixels = (typeof pixels)calloc(ScreenWidth * ScreenHeight * 4, sizeof *pixels);
 	assert(pixels);
 
 	glfwMakeContextCurrent(window);
-	glEnable(GL_TEXTURE_2D);
 
-	GLuint tex = 0;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-	int CurWidth	= 0,
-		CurHeight	= 0;
+	GLsizei CurWidth	= 0,
+			CurHeight	= 0;
 	glfwGetFramebufferSize(window, &CurWidth, &CurHeight);
 	for (size_t y = 0; y < CurHeight; y++) {
 		for (size_t x = 0; x < CurWidth; x++) {
@@ -84,14 +79,11 @@ int run_Mandelbrot() {
 			pixels[ind + 3] = 0xFF;
 		}
 	}
-	glViewport(0, 0, CurWidth, CurHeight);
-	glTexImage2D(	GL_TEXTURE_2D, 0, GL_RGBA8, CurWidth, CurHeight,
-					0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
 	fprintf(stderr, "Width = %d, Height = %d\n", CurWidth, CurHeight);
 	while (!glfwWindowShouldClose(window)) {
-		int	NewWidth	= 0,
-			NewHeight	= 0;
+		GLsizei	NewWidth	= 0,
+				NewHeight	= 0;
 		glfwGetFramebufferSize(window, &NewWidth, &NewHeight);
 		if (NewWidth != CurWidth or NewHeight != CurHeight) {
 			CurWidth	= NewWidth;
@@ -106,23 +98,21 @@ int run_Mandelbrot() {
 					pixels[ind + 3] = 0xFF;
 				}
 			}
-			glViewport(0, 0, CurWidth, CurHeight);
-			glTexImage2D(	GL_TEXTURE_2D, 0, GL_RGBA8, CurWidth, CurHeight,
-							0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		}
-
-		glBegin(GL_QUADS);
-			glTexCoord2f(0, 0); glVertex2f(-1, -1);
-			glTexCoord2f(1, 0); glVertex2f( 1, -1);
-			glTexCoord2f(1, 1); glVertex2f( 1,  1);
-			glTexCoord2f(0, 1); glVertex2f(-1,  1);
-		glEnd();
 		
+		glViewport(0, 0, CurWidth, CurHeight);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, CurWidth, 0, CurHeight, -1, 1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glRasterPos2i(0, 0);
+		glDrawPixels(CurWidth, CurHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		glfwSwapBuffers(window);
+
 		glfwPollEvents();
 	}
 
-	glDeleteTextures(1, &tex);
 	free(pixels);
 	glfwDestroyWindow(window);
 	glfwTerminate();
