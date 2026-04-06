@@ -12,7 +12,7 @@ SRC = Mandelbrot main
 
 TARGET = Test
 
-C_FLAGS	=	-D_DEBUG -ggdb3 -std=c23 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat								\
+C_FLAGS =	-D_DEBUG -D__STDC_WANT_LIB_EXT1__ -ggdb3 -std=c23 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat		\
 			-Wmissing-declarations -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported -Wconversion -Wctor-dtor-privacy	\
 			-Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op			\
 			-Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual -Wpacked -Wpointer-arith -Winit-self -Wredundant-decls -Wshadow			\
@@ -39,7 +39,7 @@ $(TARGET): $(call make_obj_path, $(SRC))
 	@gcc $(C_OPTIONS) $^ -lglfw -lGL -o $(TARGET)
 
 test: $(TARGET)
-	@./$(TARGET)
+	@prime-run ./$(TARGET)
 
 clean:
 	@rm -fr	$(OBJ_DIR) $(TARGET)

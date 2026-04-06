@@ -1,3 +1,4 @@
+#include "Common.h"
 #include "Mandelbrot.h"
 
 int main() {
