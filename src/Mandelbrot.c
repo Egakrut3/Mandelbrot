@@ -1,5 +1,4 @@
 #include "Mandelbrot.h"
-#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
 // TODO - Make error handling
@@ -35,9 +34,6 @@ static void update_win(GLFWwindow *win) {
 	fill_buff(buff_ptr);
 
 	glViewport(0, 0, buff_ptr->w, buff_ptr->h);
-	glDrawPixels(buff_ptr->w, buff_ptr->h, GL_RGBA, GL_UNSIGNED_BYTE, buff_ptr->pixels);
-	glfwSwapBuffers(win);
-	glDrawPixels(buff_ptr->w, buff_ptr->h, GL_RGBA, GL_UNSIGNED_BYTE, buff_ptr->pixels);
 }
 
 static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
@@ -73,6 +69,8 @@ int run_Mandelbrot() {
 			frm_beg_time		= last_FRS_rep_time;
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
+		glDrawPixels(buff.w, buff.h, GL_RGBA, GL_UNSIGNED_BYTE, buff.pixels);
+
 		glfwSwapBuffers(win);
 		glfwPollEvents();
 
