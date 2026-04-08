@@ -1,4 +1,5 @@
 #include "Mandelbrot.h"
+#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
 // TODO - Make error handling
@@ -34,13 +35,19 @@ GLfloat abs2(struct Complex z) {
 
 GLuint get_color(struct Complex z0) {
 	struct Complex z = z0;
-	for (size_t i = 0; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
+	size_t i = 0;
+	for (; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
 		if (abs2(z) > MANDELBROT_BORDER2) {
-			return ~0;
+			break;
 		}
 	}
 
-	return 0;
+	GLfloat	t1 = (float) i / MANDELBROT_ITER,
+			t0 = 1 - t1;
+	return	(GLubyte)(t0 * t0 * t0 * 0xFF) << CHAR_BIT * 0 |
+			(GLubyte)(t1 * t0 * t0 * 0xFF) << CHAR_BIT * 1 |
+			(GLubyte)(t1 * t1 * t0 * 0xFF) << CHAR_BIT * 2 |
+			(GLubyte)(t1 * t1 * t1 * 0xFF) << CHAR_BIT * 3;
 }
 
 struct Pixel_buff {

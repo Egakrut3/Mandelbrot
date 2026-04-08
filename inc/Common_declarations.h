@@ -5,6 +5,7 @@
 #include <iso646.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #ifdef _DEBUG
 #define ON_DEBUG(...) __VA_ARGS__
