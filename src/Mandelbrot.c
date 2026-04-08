@@ -44,9 +44,9 @@ GLuint get_color(struct Complex z0) {
 
 	GLfloat	t1 = (float) i / MANDELBROT_ITER,
 			t0 = 1 - t1;
-	return	(GLubyte)(1			* t0 * t0 * t0 * 0xFF) << CHAR_BIT * 0 |
-			(GLubyte)(27. / 4	* t1 * t0 * t0 * 0xFF) << CHAR_BIT * 1 |
-			(GLubyte)(27. / 4	* t1 * t1 * t0 * 0xFF) << CHAR_BIT * 2 |
+	return	(GLubyte)(1			* t0 * t0 * t0 * 0xFF) << CHAR_BIT * 2 |
+			(GLubyte)(27. / 4	* t1 * t0 * t0 * 0xFF) << CHAR_BIT * 0 |
+			(GLubyte)(27. / 4	* t1 * t1 * t0 * 0xFF) << CHAR_BIT * 1 |
 			(GLubyte)1 << CHAR_BIT * 3;
 }
 
