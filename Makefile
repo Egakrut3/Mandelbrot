@@ -45,6 +45,6 @@ clean:
 	@rm -fr	$(OBJ_DIR) $(TARGET)
 
 commit:
-	git add .
-	git commit -m "$(MSG)"
-	git push
+	@git add .
+	@git commit
+	@git push
