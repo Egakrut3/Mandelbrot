@@ -10,22 +10,54 @@ static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
+struct Complex {
+	GLfloat	x,
+			y;
+};
+
+struct Complex sum_Complex(struct Complex a, struct Complex b) {
+	return (struct Complex){a.x + b.x,
+							a.y + b.y};
+}
+
+struct Complex mlt_Complex(struct Complex a, struct Complex b) {
+	return (struct Complex){a.x * b.x - a.y * b.y,
+							a.x * b.y + a.y * b.x};
+}
+
+GLfloat abs2(struct Complex z) {
+	return z.x * z.x + z.y * z.y;
+}
+
+#define MANDELBROT_ITER		((size_t) 64)
+#define MANDELBROT_BORDER2	2 * 2
+
+GLuint get_color(struct Complex z0) {
+	struct Complex z = z0;
+	for (size_t i = 0; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
+		if (abs2(z) > MANDELBROT_BORDER2) {
+			return ~0;
+		}
+	}
+
+	return 0;
+}
+
 struct Pixel_buff {
-	GLubyte *pixels;
+	GLuint *pixels;
 	size_t size;
 	GLsizei	w,
 			h;
 };
 
+#define MANDELBROT_SCALE 0.003f
+
 static void fill_buff(struct Pixel_buff *buff_ptr) {
 	for (GLsizei y = 0; y < buff_ptr->h; y++) {
 		for (GLsizei x = 0; x < buff_ptr->w; x++) {
-			GLubyte *cur_pixel = buff_ptr->pixels + (y * buff_ptr->w + x) * 4;
-			cur_pixel[0] = x		& 0xFF;
-			cur_pixel[1] = y		& 0xFF;
-			cur_pixel[2] = (x + y)	& 0xFF;
-
-			cur_pixel[3] = 0xFF;
+			GLuint *cur_pixel = buff_ptr->pixels + y * buff_ptr->w + x;
+			*cur_pixel = get_color((struct Complex){(x - buff_ptr->w / 2) * MANDELBROT_SCALE,
+														(y - buff_ptr->h / 2) * MANDELBROT_SCALE});
 		}
 	}
 }
@@ -46,7 +78,7 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 		buff_ptr->pixels = realloc(buff_ptr->pixels, new_size);
 	}
 
-	update_win(win);
+	// update_win(win);
 }
 
 #define start_win_w	800
@@ -68,12 +100,13 @@ int run_Mandelbrot() {
 	update_win(win);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
-	#define MAX_FPS_TITLE_LENGTH 16
+	#define MAX_FPS_TITLE_LENGTH ((size_t)16)
 	double	FPS = 0,
 			last_FRS_rep_time	= glfwGetTime(),
 			frm_beg_time		= last_FRS_rep_time;
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
+		update_win(win);
 		glDrawPixels(buff.w, buff.h, GL_RGBA, GL_UNSIGNED_BYTE, buff.pixels);
 
 		glfwSwapBuffers(win);
