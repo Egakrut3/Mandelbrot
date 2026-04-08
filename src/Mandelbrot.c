@@ -6,6 +6,8 @@
 // TODO - Make error handling
 // TODO - Possible use BGRA
 
+static void fill_buffer(GLubyte *pixels) {}
+
 #define GLFW_FAILED_TO_INIT				1
 #define GLFW_FAILED_TO_CREATE_WINDOW	2
 static void glfw_error_callback(int err, char const *desc) {
@@ -16,19 +18,21 @@ static void glfw_error_callback(int err, char const *desc) {
 #define start_win_h	600
 
 int run_Mandelbrot() {
-	if (!glfwInit()) { return GLFW_FAILED_TO_INIT; }
+	glfwInit();
 	glfwSetErrorCallback(glfw_error_callback);
 
-	GLFWwindow *win = glfwCreateWindow(start_win_w, start_win_h, "Mandelbrot", nullptr, nullptr);
-	if (!win) { glfwTerminate(); return GLFW_FAILED_TO_CREATE_WINDOW; }
+
+
+	GLFWwindow *win = await_glfwCreateWindow(start_win_w, start_win_h, "FPS: ", nullptr, nullptr);
 	glfwMakeContextCurrent(win);
-	await_glfwInit(win);
+	glfwSwapInterval(1);
 
 
 
 	await_glfwMaximizeWindow(win);
-	GLsizei	max_win_w = 0,
-			max_win_h = 0;
+
+	int	max_win_w = 0,
+		max_win_h = 0;
 	glfwGetWindowSize(win, &max_win_w, &max_win_h);
 	glfwSetWindowSizeLimits(win, GLFW_DONT_CARE, GLFW_DONT_CARE, max_win_w, max_win_h);
 
@@ -44,8 +48,8 @@ int run_Mandelbrot() {
 
 
 
-	GLsizei	cur_win_w = 0,
-			cur_win_h = 0;
+	int	cur_win_w = 0,
+		cur_win_h = 0;
 	glfwGetWindowSize(win, &cur_win_w, &cur_win_h);
 
 	GLsizei	cur_buff_w = 0,
@@ -64,20 +68,22 @@ int run_Mandelbrot() {
 
 
 
-	double	frm_beg_time	= glfwGetTime(),
-			FPS				= 0;
-	char FPS_title[16] = "";
+	#define MAX_FPS_TITLE_LENGTH 16
+	double	FPS					= 0,
+			last_FRS_rep_time	= glfwGetTime(),
+			frm_beg_time		= last_FRS_rep_time;
+	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
-		GLsizei	new_win_w = 0,
-				new_win_h = 0;
+		glfwPollEvents();
+
+		int	new_win_w = 0,
+			new_win_h = 0;
 		glfwGetWindowSize(win, &new_win_w, &new_win_h);
 		new_win_w = min(new_win_w, max_win_w);
 		new_win_h = min(new_win_h, max_win_h);
 		if (new_win_w != cur_win_w or
 			new_win_h != cur_win_h) {
 			await_glfwSetWindowSize(win, new_win_w, new_win_h);
-
-
 
 			cur_win_w = new_win_w;
 			cur_win_h = new_win_h;
@@ -98,17 +104,21 @@ int run_Mandelbrot() {
 		glDrawPixels(cur_buff_w, cur_buff_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		glfwSwapBuffers(win);
 
-		double cur_time = glfwGetTime();
-		FPS = FPS * 0.9 + 0.1 / (cur_time - frm_beg_time);
-		frm_beg_time = cur_time;
-		snprintf(FPS_title, 16, "FPS: %.2f", FPS);
-		await_glfwSetWindowTitle(win, FPS_title);
 
-		glfwPollEvents();
+
+		double cur_time = glfwGetTime();
+		FPS = FPS * 0.9 + 1 / (cur_time - frm_beg_time) * 0.1;
+		if (cur_time - last_FRS_rep_time >= 1) {
+			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "FPS: %.2f", FPS);
+			await_glfwSetWindowTitle(win, FPS_title);
+			last_FRS_rep_time = cur_time;
+		}
+		frm_beg_time = cur_time;
 	}
 
 	free(pixels);
-	glfwDestroyWindow(win);
+	await_glfwDestroyWindow(win);
+
 	glfwTerminate();
 	return 0;
 }

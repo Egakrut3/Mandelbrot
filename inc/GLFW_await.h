@@ -4,9 +4,9 @@
 #include "Common.h"
 #include <GLFW/glfw3.h>
 
-void await_glfwInit(GLFWwindow *window);
+GLFWwindow *await_glfwCreateWindow(int width, int height, char const *title, GLFWmonitor *monitor, GLFWwindow *share);
 
-
+void await_glfwDestroyWindow(GLFWwindow *window);
 
 void await_glfwMaximizeWindow(GLFWwindow *window);
 
