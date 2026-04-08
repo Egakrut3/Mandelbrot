@@ -46,5 +46,5 @@ clean:
 
 commit:
 	@git add .
-	@git commit
+	@git commit -m "$(MSG)"
 	@git push
