@@ -4,10 +4,7 @@
 #define __STDC_WANT_LIB_EXT1__ 1
 #include <iso646.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <errno.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #ifdef _DEBUG
 #define ON_DEBUG(...) __VA_ARGS__

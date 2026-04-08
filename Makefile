@@ -8,7 +8,7 @@ OBJ_DIR	= bin/
 OBJ_SUF	= .obj
 make_obj_path	= $(addprefix $(OBJ_DIR), $(addsuffix $(OBJ_SUF),	$(1)))
 
-SRC = GLFW_await Mandelbrot main
+SRC = Mandelbrot main
 
 TARGET = Test
 

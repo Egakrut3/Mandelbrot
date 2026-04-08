@@ -1,126 +1,104 @@
 #include "Mandelbrot.h"
-#include "GLFW_common.h"
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
 // TODO - Make error handling
 // TODO - Possible use BGRA
 
-static void fill_buffer(GLubyte *pixels) {}
-
 #define GLFW_FAILED_TO_INIT				1
 #define GLFW_FAILED_TO_CREATE_WINDOW	2
-static void glfw_error_callback(int err, char const *desc) {
+static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
+}
+struct Pixel_buffer {
+	GLubyte *pixels;
+	GLsizei	w,
+			h;
+};
+
+static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
+	struct Pixel_buffer *buff_ptr = glfwGetWindowUserPointer(win);
+	buff_ptr->w = w;
+	buff_ptr->h = h;
+	buff_ptr->pixels = realloc(buff_ptr->pixels, buff_ptr->w * buff_ptr->h * 4 * sizeof(*buff_ptr->pixels));
+	for (GLsizei y = 0; y < buff_ptr->h; y++) {
+		for (GLsizei x = 0; x < buff_ptr->w; x++) {
+			GLubyte *cur_pixel = buff_ptr->pixels + (y * buff_ptr->w + x) * 4;
+			cur_pixel[0] = x		& 0xFF;
+			cur_pixel[1] = y		& 0xFF;
+			cur_pixel[2] = (x + y)	& 0xFF;
+
+			cur_pixel[3] = 0xFF;
+		}
+	}
+	glViewport(0, 0, buff_ptr->w, buff_ptr->h);
 }
 
 #define start_win_w	800
 #define start_win_h	600
 
 int run_Mandelbrot() {
+	glfwSetErrorCallback(error_callback);
 	glfwInit();
-	glfwSetErrorCallback(glfw_error_callback);
 
 
 
-	GLFWwindow *win = await_glfwCreateWindow(start_win_w, start_win_h, "FPS: ", nullptr, nullptr);
+	glfwWindowHint(GLFW_STEREO,				GLFW_FALSE);
+	glfwWindowHint(GLFW_DOUBLEBUFFER,			GLFW_TRUE);
+	glfwWindowHint(GLFW_CLIENT_API,			GLFW_OPENGL_API);
+
+	//glfwWindowHint(GLFW_RESIZABLE,			GLFW_FALSE);
+	// glfwWindowHint(GLFW_SCALE_FRAMEBUFFER,	GLFW_FALSE);
+
+
+
+	GLFWwindow *win = glfwCreateWindow(start_win_w, start_win_h, "FPS: ", 0, 0);
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
 
 
-	await_glfwMaximizeWindow(win);
+	struct Pixel_buffer buff = {};
+	glfwGetFramebufferSize(win, &buff.w, &buff.h);
+	buff.pixels = malloc(buff.w * buff.h * 4 * sizeof(*buff.pixels));
+	for (GLsizei y = 0; y < buff.h; y++) {
+		for (GLsizei x = 0; x < buff.w; x++) {
+			GLubyte *cur_pixel = buff.pixels + (y * buff.w + x) * 4;
+			cur_pixel[0] = x		& 0xFF;
+			cur_pixel[1] = y		& 0xFF;
+			cur_pixel[2] = (x + y)	& 0xFF;
 
-	int	max_win_w = 0,
-		max_win_h = 0;
-	glfwGetWindowSize(win, &max_win_w, &max_win_h);
-	glfwSetWindowSizeLimits(win, GLFW_DONT_CARE, GLFW_DONT_CARE, max_win_w, max_win_h);
-
-	GLsizei	max_buff_w = 0,
-			max_buff_h = 0;
-	glfwGetFramebufferSize(win, &max_buff_w, &max_buff_h);
-	GLubyte *pixels = nullptr;
-	pixels = (typeof(pixels))calloc(max_buff_w * max_buff_h * 4, sizeof(*pixels));
-	assert(pixels);
-
-	await_glfwRestoreWindow(win);
-	await_glfwSetWindowSize(win, start_win_w, start_win_h);
-
-
-
-	int	cur_win_w = 0,
-		cur_win_h = 0;
-	glfwGetWindowSize(win, &cur_win_w, &cur_win_h);
-
-	GLsizei	cur_buff_w = 0,
-			cur_buff_h = 0;
-	glfwGetFramebufferSize(win, &cur_buff_w, &cur_buff_h);
-	for (size_t y = 0; y < cur_buff_h; y++) {
-		for (size_t x = 0; x < cur_buff_w; x++) {
-			size_t ind = (y * cur_buff_w + x) * 4;
-			pixels[ind + 0] = x & 0xFF;
-			pixels[ind + 1] = y & 0xFF;
-			pixels[ind + 2] = (x + y) & 0xFF;
-			pixels[ind + 3] = 0xFF;
+			cur_pixel[3] = 0xFF;
 		}
 	}
-	glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1);
+	glViewport(0, 0, buff.w, buff.h);
+	glfwSetWindowUserPointer(win, &buff);
+	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
 
 
 	#define MAX_FPS_TITLE_LENGTH 16
-	double	FPS					= 0,
+	double	FPS = 0,
 			last_FRS_rep_time	= glfwGetTime(),
 			frm_beg_time		= last_FRS_rep_time;
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
-		glfwPollEvents();
-
-		int	new_win_w = 0,
-			new_win_h = 0;
-		glfwGetWindowSize(win, &new_win_w, &new_win_h);
-		if (new_win_w > max_win_w or
-			new_win_h > max_win_h) {
-			new_win_w = min(new_win_w, max_win_w);
-			new_win_h = min(new_win_h, max_win_h);
-			await_glfwSetWindowSize(win, new_win_w, new_win_h);
-		}
-		if (new_win_w != cur_win_w or
-			new_win_h != cur_win_h) {
-
-			cur_win_w = new_win_w;
-			cur_win_h = new_win_h;
-
-			glfwGetFramebufferSize(win, &cur_buff_w, &cur_buff_h);
-			for (size_t y = 0; y < cur_buff_h; y++) {
-				for (size_t x = 0; x < cur_buff_w; x++) {
-					size_t ind = (y * cur_buff_w + x) * 4;
-					pixels[ind + 0] = x & 0xFF;
-					pixels[ind + 1] = y & 0xFF;
-					pixels[ind + 2] = (x + y) & 0xFF;
-					pixels[ind + 3] = 0xFF;
-				}
-			}
-			glOrtho(0, cur_buff_w, 0, cur_buff_h, -1, 1);
-		}
-		
-		glDrawPixels(cur_buff_w, cur_buff_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glDrawPixels(buff.w, buff.h, GL_RGBA, GL_UNSIGNED_BYTE, buff.pixels);
 		glfwSwapBuffers(win);
-
-
+		glfwPollEvents();
 
 		double cur_time = glfwGetTime();
 		FPS = FPS * 0.9 + 1 / (cur_time - frm_beg_time) * 0.1;
 		if (cur_time - last_FRS_rep_time >= 1) {
 			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "FPS: %.2f", FPS);
-			await_glfwSetWindowTitle(win, FPS_title);
+			glfwSetWindowTitle(win, FPS_title);
 			last_FRS_rep_time = cur_time;
 		}
 		frm_beg_time = cur_time;
 	}
 
-	free(pixels);
-	await_glfwDestroyWindow(win);
+	free(buff.pixels);
+	glfwDestroyWindow(win);
 
 	glfwTerminate();
 	return 0;
