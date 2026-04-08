@@ -8,8 +8,6 @@
 
 #define GLFW_FAILED_TO_INIT				1
 #define GLFW_FAILED_TO_CREATE_WINDOW	2
-
-static int callback_done = 0;
 static void glfw_error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
@@ -38,7 +36,7 @@ int run_Mandelbrot() {
 			max_buff_h = 0;
 	glfwGetFramebufferSize(win, &max_buff_w, &max_buff_h);
 	GLubyte *pixels = nullptr;
-	pixels = (typeof pixels)calloc(max_buff_w * max_buff_h * 4, sizeof *pixels);
+	pixels = (typeof(pixels))calloc(max_buff_w * max_buff_h * 4, sizeof(*pixels));
 	assert(pixels);
 
 	await_glfwRestoreWindow(win);
@@ -73,8 +71,8 @@ int run_Mandelbrot() {
 		GLsizei	new_win_w = 0,
 				new_win_h = 0;
 		glfwGetWindowSize(win, &new_win_w, &new_win_h);
-		new_win_w = new_win_w <= max_win_w ? new_win_w : max_win_w;
-		new_win_h = new_win_h <= max_win_h ? new_win_h : max_win_h;
+		new_win_w = min(new_win_w, max_win_w);
+		new_win_h = min(new_win_h, max_win_h);
 		if (new_win_w != cur_win_w or
 			new_win_h != cur_win_h) {
 			await_glfwSetWindowSize(win, new_win_w, new_win_h);

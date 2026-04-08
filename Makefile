@@ -1,7 +1,7 @@
 INC_DIR = inc/
 
 SRC_DIR	= src/
-C_SUF	= .cpp
+C_SUF	= .c
 make_c_path		= $(addprefix $(SRC_DIR), $(addsuffix $(C_SUF),		$(1)))
 
 OBJ_DIR	= bin/
@@ -45,6 +45,6 @@ clean:
 	@rm -fr	$(OBJ_DIR) $(TARGET)
 
 commit:
-	@git add .
-	@git commit -m "$(MSG)"
-	@git push
+	git add .
+	git commit -m "$(MSG)"
+	git push

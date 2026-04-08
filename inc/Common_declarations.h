@@ -2,6 +2,7 @@
 #define COMMON_DECLARATIONS
 
 #define __STDC_WANT_LIB_EXT1__ 1
+#include <iso646.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
@@ -34,5 +35,8 @@ do {																		\
 } while (false)
 
 typedef unsigned char byte_t;
+
+#define min(a, b) a < b ? a : b
+#define max(a, b) a > b > a : b
 
 #endif
