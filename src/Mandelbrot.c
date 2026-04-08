@@ -79,11 +79,14 @@ int run_Mandelbrot() {
 		int	new_win_w = 0,
 			new_win_h = 0;
 		glfwGetWindowSize(win, &new_win_w, &new_win_h);
-		new_win_w = min(new_win_w, max_win_w);
-		new_win_h = min(new_win_h, max_win_h);
+		if (new_win_w > max_win_w or
+			new_win_h > max_win_h) {
+			new_win_w = min(new_win_w, max_win_w);
+			new_win_h = min(new_win_h, max_win_h);
+			await_glfwSetWindowSize(win, new_win_w, new_win_h);
+		}
 		if (new_win_w != cur_win_w or
 			new_win_h != cur_win_h) {
-			await_glfwSetWindowSize(win, new_win_w, new_win_h);
 
 			cur_win_w = new_win_w;
 			cur_win_h = new_win_h;
