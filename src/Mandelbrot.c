@@ -12,6 +12,7 @@ static void error_callback(int err, char const *desc) {
 
 struct Pixel_buff {
 	GLubyte *pixels;
+	size_t size;
 	GLsizei	w,
 			h;
 };
@@ -40,7 +41,10 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 	struct Pixel_buff *buff_ptr = glfwGetWindowUserPointer(win);
 	buff_ptr->w = w;
 	buff_ptr->h = h;
-	buff_ptr->pixels = realloc(buff_ptr->pixels, buff_ptr->w * buff_ptr->h * 4 * sizeof(*buff_ptr->pixels));
+	size_t new_size = buff_ptr->w * buff_ptr->h * 4 * sizeof(*buff_ptr->pixels);
+	if (new_size > buff_ptr->size) {
+		buff_ptr->pixels = realloc(buff_ptr->pixels, new_size);
+	}
 
 	update_win(win);
 }
@@ -58,7 +62,8 @@ int run_Mandelbrot() {
 
 	struct Pixel_buff buff = {};
 	glfwGetFramebufferSize(win, &buff.w, &buff.h);
-	buff.pixels = malloc(buff.w * buff.h * 4 * sizeof(*buff.pixels));
+	buff.size = buff.w * buff.h * 4 * sizeof(*buff.pixels);
+	buff.pixels = malloc(buff.size);
 	glfwSetWindowUserPointer(win, &buff);
 	update_win(win);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
@@ -72,7 +77,7 @@ int run_Mandelbrot() {
 		glDrawPixels(buff.w, buff.h, GL_RGBA, GL_UNSIGNED_BYTE, buff.pixels);
 
 		glfwSwapBuffers(win);
-		glfwPollEvents();
+		glfwWaitEvents();
 
 		double cur_time = glfwGetTime();
 		FPS = FPS * 0.9 + 1 / (cur_time - frm_beg_time) * 0.1;
