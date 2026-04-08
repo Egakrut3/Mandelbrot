@@ -1,5 +1,4 @@
 #include "Mandelbrot.h"
-#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
 // TODO - Make error handling
@@ -33,7 +32,7 @@ GLfloat abs2(struct Complex z) {
 #define MANDELBROT_ITER		((size_t) 64)
 #define MANDELBROT_BORDER2	2 * 2
 
-GLuint get_color(struct Complex z0) {
+void load_RGBA_FLOAT_color(struct Complex z0, GLfloat *buff) {
 	struct Complex z = z0;
 	size_t i = 0;
 	for (; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
@@ -44,17 +43,22 @@ GLuint get_color(struct Complex z0) {
 
 	GLfloat	t1 = (float) i / MANDELBROT_ITER,
 			t0 = 1 - t1;
-	return	(GLubyte)(1			* t0 * t0 * t0 * 0xFF) << CHAR_BIT * 2 |
-			(GLubyte)(27. / 4	* t1 * t0 * t0 * 0xFF) << CHAR_BIT * 0 |
-			(GLubyte)(27. / 4	* t1 * t1 * t0 * 0xFF) << CHAR_BIT * 1 |
-			(GLubyte)1 << CHAR_BIT * 3;
+	buff[2] = 1		* t0 * t0 * t0;
+	buff[0] = 6.75	* t1 * t0 * t0;
+	buff[1] = 6.75	* t1 * t1 * t0;
+	buff[3] = 1;
+	return;
 }
 
 struct Pixel_buff {
-	GLuint *pixels;
+	GLfloat *pixels;
 	size_t size;
 	GLsizei	w,
 			h;
+};
+
+struct Mandelbrot_context {
+	struct Pixel_buff buff;
 };
 
 #define MANDELBROT_SCALE 0.003f
@@ -62,30 +66,27 @@ struct Pixel_buff {
 static void fill_buff(struct Pixel_buff *buff_ptr) {
 	for (GLsizei y = 0; y < buff_ptr->h; y++) {
 		for (GLsizei x = 0; x < buff_ptr->w; x++) {
-			GLuint *cur_pixel = buff_ptr->pixels + y * buff_ptr->w + x;
-			*cur_pixel = get_color((struct Complex){(x - buff_ptr->w / 2) * MANDELBROT_SCALE,
-														(y - buff_ptr->h / 2) * MANDELBROT_SCALE});
+			GLfloat *cur_pixel = buff_ptr->pixels + (y * buff_ptr->w + x) * 4;
+			struct Complex z0 = (struct Complex){	(x - buff_ptr->w / 2) * MANDELBROT_SCALE,
+													(y - buff_ptr->h / 2) * MANDELBROT_SCALE};
+			load_RGBA_FLOAT_color(z0, cur_pixel);
 		}
 	}
 }
 
-static void update_win(GLFWwindow *win) {
-	struct Pixel_buff *buff_ptr = glfwGetWindowUserPointer(win);
-	fill_buff(buff_ptr);
-
-	glViewport(0, 0, buff_ptr->w, buff_ptr->h);
-}
-
 static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
-	struct Pixel_buff *buff_ptr = glfwGetWindowUserPointer(win);
-	buff_ptr->w = w;
-	buff_ptr->h = h;
-	size_t new_size = buff_ptr->w * buff_ptr->h * 4 * sizeof(*buff_ptr->pixels);
-	if (new_size > buff_ptr->size) {
-		buff_ptr->pixels = realloc(buff_ptr->pixels, new_size);
+	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
+	context_ptr->buff.w = w;
+	context_ptr->buff.h = h;
+	size_t new_size = context_ptr->buff.w * context_ptr->buff.h * 4 * sizeof(*context_ptr->buff.pixels);
+	if (new_size > context_ptr->buff.size) {
+		context_ptr->buff.size *= 2;
+		context_ptr->buff.pixels = realloc(context_ptr->buff.pixels, context_ptr->buff.size);
 	}
 
-	// update_win(win);
+	fill_buff(&context_ptr->buff);
+
+	glViewport(0, 0, context_ptr->buff.w, context_ptr->buff.h);
 }
 
 #define start_win_w	800
@@ -99,37 +100,37 @@ int run_Mandelbrot() {
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
-	struct Pixel_buff buff = {};
-	glfwGetFramebufferSize(win, &buff.w, &buff.h);
-	buff.size = buff.w * buff.h * 4 * sizeof(*buff.pixels);
-	buff.pixels = malloc(buff.size);
-	glfwSetWindowUserPointer(win, &buff);
-	update_win(win);
+	struct Mandelbrot_context context = {};
+	glfwGetFramebufferSize(win, &context.buff.w, &context.buff.h);
+	context.buff.size = context.buff.w * context.buff.h * 4 * sizeof(*context.buff.pixels);
+	context.buff.pixels = malloc(context.buff.size);
+	glfwSetWindowUserPointer(win, &context);
+	fill_buff(&context.buff);
+	glViewport(0, 0, context.buff.w, context.buff.h);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
 	#define MAX_FPS_TITLE_LENGTH ((size_t)16)
 	double	FPS = 0,
-			last_FRS_rep_time	= glfwGetTime(),
-			frm_beg_time		= last_FRS_rep_time;
+			last_FPS_rep_time	= glfwGetTime(),
+			frm_beg_time		= last_FPS_rep_time;
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
-		update_win(win);
-		glDrawPixels(buff.w, buff.h, GL_RGBA, GL_UNSIGNED_BYTE, buff.pixels);
+		glDrawPixels(context.buff.w, context.buff.h, GL_RGBA, GL_FLOAT, context.buff.pixels);
 
 		glfwSwapBuffers(win);
 		glfwWaitEvents();
 
 		double cur_time = glfwGetTime();
 		FPS = FPS * 0.9 + 1 / (cur_time - frm_beg_time) * 0.1;
-		if (cur_time - last_FRS_rep_time >= 1) {
+		if (cur_time - last_FPS_rep_time >= 1) {
 			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "FPS: %.2f", FPS);
 			glfwSetWindowTitle(win, FPS_title);
-			last_FRS_rep_time = cur_time;
+			last_FPS_rep_time = cur_time;
 		}
 		frm_beg_time = cur_time;
 	}
 
-	free(buff.pixels);
+	free(context.buff.pixels);
 	glfwDestroyWindow(win);
 
 	glfwTerminate();
