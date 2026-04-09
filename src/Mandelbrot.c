@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
 
+// #define NO_DRAWING
+
 #define GL_CALL(gl_func, ...)											\
 do {																	\
 	gl_func(__VA_ARGS__);												\
@@ -122,8 +124,10 @@ static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 
 	context_ptr->w = (w + 63) & ~63;
 	context_ptr->h = h;
+
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, context_ptr->w);
 	glViewport(0, 0, w, context_ptr->h); // I intentionally pass real width, not buffer width
+
 	size_t new_size = (size_t)(context_ptr->w * context_ptr->h) * sizeof(*context_ptr->pixels);
 	if (new_size > context_ptr->size) {
 		context_ptr->size = max(context_ptr->size * 2, new_size);
@@ -140,7 +144,13 @@ static int update_frame(GLFWwindow *win) {
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	update_context(context_ptr); // TODO - Disimprovement
+
+#ifndef NO_DRAWING
+
 	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_BGR, GL_FLOAT, context_ptr->pixels);
+
+#endif
+
 	glfwSwapBuffers(win);
 
 	int glfw_error = glfwGetError(0);
@@ -152,7 +162,6 @@ static int update_frame(GLFWwindow *win) {
 
 #define DEFAULT_WIN_W	1024
 #define DEFAULT_WIN_H	768
-
 int run_Mandelbrot() {
 	#define FINAL_CODE
 
@@ -168,7 +177,6 @@ int run_Mandelbrot() {
 	#define FINAL_CODE		\
 	glfwDestroyWindow(win);	\
 	glfwTerminate();
-
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
@@ -177,6 +185,7 @@ int run_Mandelbrot() {
 	glViewport(0, 0, context.w, context.h); // I intentionally pass real width, not buffer width
 	context.w = (context.w + 63) & ~63;
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, context.w);
+
 	context.size = (size_t)(context.w * context.h) * sizeof(*context.pixels);
 	assert(context.size % 64 == 0);
 	context.pixels = malloc(context.size);

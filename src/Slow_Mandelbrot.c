@@ -1,6 +1,8 @@
 #include "Mandelbrot.h"
 #include <GLFW/glfw3.h>
 
+// #define NO_DRAWING
+
 #define GL_CALL(gl_func, ...)											\
 do {																	\
 	gl_func(__VA_ARGS__);												\
@@ -108,7 +110,7 @@ static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 
 	context_ptr->w = w;
 	context_ptr->h = h;
-	glViewport(0, 0, context_ptr->w, context_ptr->h);
+
 	size_t new_size = (size_t)(context_ptr->w * context_ptr->h) * sizeof(*context_ptr->pixels);
 	if (new_size > context_ptr->size) {
 		context_ptr->size = max(context_ptr->size * 2, new_size);
@@ -125,7 +127,13 @@ static int update_frame(GLFWwindow *win) {
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	update_context(context_ptr); // TODO - Disimprovement
+
+#ifndef NO_DRAWING
+
 	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_BGR, GL_FLOAT, context_ptr->pixels);
+
+#endif
+
 	glfwSwapBuffers(win);
 
 	int glfw_error = glfwGetError(0);
