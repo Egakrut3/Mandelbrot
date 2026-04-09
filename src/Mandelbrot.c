@@ -48,6 +48,8 @@ GLfloat abs2(struct Complex z) {
 #define MANDELBROT_BORDER2	2 * 2
 
 void load_RGBA_FLOAT_color(struct Complex z0, GLfloat *buff) {
+	assert(buff);
+
 	struct Complex z = z0;
 	size_t i = 0;
 	for (; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
@@ -75,6 +77,8 @@ struct Mandelbrot_context {
 };
 
 static void update_context(struct Mandelbrot_context *context_ptr) {
+	assert(context_ptr);
+
 	for (GLsizei y = 0; y < context_ptr->h; y++) {
 		for (GLsizei x = 0; x < context_ptr->w; x++) {
 			GLfloat *cur_pixel = context_ptr->pixels + (y * context_ptr->w + x) * 3;
@@ -86,7 +90,11 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 }
 
 static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
+	assert(win);
+
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
+	assert(context_ptr);
+
 	context_ptr->w = w;
 	context_ptr->h = h;
 	glViewport(0, 0, context_ptr->w, context_ptr->h);
@@ -103,7 +111,11 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 #define SCALE_MLT		((GLfloat)1.1)
 #define PIXEL_STEP		100
 static void keyboard_callback(GLFWwindow *win, int key, int scancode, int action, int mods) {
+	assert(win);
+
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
+	assert(context_ptr);
+
 	if (action == GLFW_PRESS) {
 		if (mods & GLFW_MOD_SHIFT) {
 			if (key == GLFW_KEY_EQUAL)	{ context_ptr->scale /= SCALE_MLT; }
@@ -120,6 +132,8 @@ static void keyboard_callback(GLFWwindow *win, int key, int scancode, int action
 #define FINAL_CODE
 
 static int update_frame(GLFWwindow *win) {
+	assert(win);
+
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	update_context(context_ptr); // TODO -
 	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_RGB, GL_FLOAT, context_ptr->pixels);
