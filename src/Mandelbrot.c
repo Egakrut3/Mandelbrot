@@ -4,8 +4,23 @@
 // TODO - Make error handling
 // TODO - Possible use BGRA
 
-#define GLFW_FAILED_TO_INIT				1
-#define GLFW_FAILED_TO_CREATE_WINDOW	2
+#define GL_CALL(gl_func, ...)											\
+do {																	\
+	gl_func(__VA_ARGS__);												\
+	GLenum __cur_err_val = glGetError();								\
+	if (__cur_err_val != GL_NO_ERROR) {									\
+		ON_DEBUG(														\
+		fprintf(stderr, "Error found: " __FILE__ ":%d: %s: Code %d\n",	\
+						__LINE__, __func__, __cur_err_val);				\
+		perror(#gl_func " failed");										\
+		)																\
+		CLEAR_RESOURCES();												\
+		return __cur_err_val;											\
+	}																	\
+} while (false);
+
+
+#define GLFW_FAILED_TO_INIT	0x100
 static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
@@ -77,8 +92,10 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 	glViewport(0, 0, context_ptr->w, context_ptr->h);
 	size_t new_size = context_ptr->w * context_ptr->h * 3 * sizeof(*context_ptr->pixels);
 	if (new_size > context_ptr->size) {
-		context_ptr->size *= 2;
-		context_ptr->pixels = realloc(context_ptr->pixels, context_ptr->size);
+		context_ptr->size = max(new_size, context_ptr->size * 2);
+		void *new_pixels = realloc(context_ptr->pixels, context_ptr->size);
+		if (!new_pixels) { fprintf(stderr, "I can't fix that\n"); PRINT_LINE(); return; }
+		context_ptr->pixels = new_pixels;
 	}
 }
 
@@ -100,21 +117,40 @@ static void keyboard_callback(GLFWwindow *win, int key, int scancode, int action
 	}
 }
 
-static void update_frame(GLFWwindow *win) {
+#define FINAL_CODE
+
+static int update_frame(GLFWwindow *win) {
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
-	update_context(context_ptr);
-	glDrawPixels(context_ptr->w, context_ptr->h, GL_RGB, GL_FLOAT, context_ptr->pixels);
+	update_context(context_ptr); // TODO -
+	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_RGB, GL_FLOAT, context_ptr->pixels);
 	glfwSwapBuffers(win);
+
+	int glfw_error = glfwGetError(0);
+	CLEAR_RESOURCES();
+	return glfw_error == GLFW_NO_ERROR ? 0 : glfw_error;
 }
+
+#undef FINAL_CODE
 
 #define DEFAULT_WIN_W	800
 #define DEFAULT_WIN_H	600
 
 int run_Mandelbrot() {
+	#define FINAL_CODE
+
 	glfwSetErrorCallback(error_callback);
-	glfwInit();
+	if (glfwInit() == GLFW_FALSE) { CLEAR_RESOURCES(); return glfwGetError(0); }
+	#undef FINAL_CODE
+	#define FINAL_CODE	\
+	glfwTerminate();
 
 	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "FPS: ", 0, 0);
+	if (!win) { CLEAR_RESOURCES(); return glfwGetError(0); }
+	#undef FINAL_CODE
+	#define FINAL_CODE		\
+	glfwDestroyWindow(win);	\
+	glfwTerminate();
+
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
@@ -123,10 +159,14 @@ int run_Mandelbrot() {
 	glViewport(0, 0, context.w, context.h);
 	context.size = context.w * context.h * 3 * sizeof(*context.pixels);
 	context.pixels = malloc(context.size);
+	if (!context.pixels) { CLEAR_RESOURCES(); return errno; }
+	#undef FINAL_CODE
+	#define FINAL_CODE		\
+	free(context.pixels);	\
+	glfwDestroyWindow(win);	\
+	glfwTerminate();
 	context.scale = DEFAULT_SCALE;
-
 	glfwSetWindowUserPointer(win, &context);
-	update_context(&context);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 	glfwSetKeyCallback(win, keyboard_callback);
 
@@ -137,7 +177,7 @@ int run_Mandelbrot() {
 			frm_beg_time		= last_FPS_rep_time;
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
-		update_frame(win);
+		CHECK_FUNC(update_frame, win);
 		glfwWaitEvents();
 
 		double cur_time = glfwGetTime();
@@ -151,9 +191,9 @@ int run_Mandelbrot() {
 		frm_beg_time = cur_time;
 	}
 
-	free(context.pixels);
-	glfwDestroyWindow(win);
+	int glfw_error = glfwGetError(0);
+	CLEAR_RESOURCES();
+	return glfw_error == GLFW_NO_ERROR ? 0 : glfw_error;
 
-	glfwTerminate();
-	return 0;
+	#undef FINAL_CODE
 }
