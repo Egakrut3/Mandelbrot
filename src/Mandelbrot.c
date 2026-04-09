@@ -1,5 +1,6 @@
 #include "Mandelbrot.h"
 #include <GLFW/glfw3.h>
+#include <immintrin.h>
 
 // TODO - Make error handling
 // TODO - Possible use BGRA
@@ -47,24 +48,7 @@ GLfloat abs2(struct Complex z) {
 #define MANDELBROT_ITER		((size_t) 32)
 #define MANDELBROT_BORDER2	2 * 2
 
-void load_RGBA_FLOAT_color(struct Complex z0, GLfloat *buff) {
-	assert(buff);
 
-	struct Complex z = z0;
-	size_t i = 0;
-	for (; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
-		if (abs2(z) > MANDELBROT_BORDER2) {
-			break;
-		}
-	}
-
-	GLfloat	t1 = (GLfloat) i / MANDELBROT_ITER,
-			t0 = 1 - t1;
-	buff[2] = (GLfloat)1.	* t0 * t0 * t0;
-	buff[0] = (GLfloat)6.75	* t1 * t0 * t0;
-	buff[1] = (GLfloat)6.75	* t1 * t1 * t0;
-	return;
-}
 
 struct Mandelbrot_context {
 	GLfloat	*pixels,
@@ -84,7 +68,20 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 			GLfloat *cur_pixel = context_ptr->pixels + (y * context_ptr->w + x) * 3;
 			struct Complex z0 = (struct Complex){	(x - context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off,
 													(y - context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off};
-			load_RGBA_FLOAT_color(z0, cur_pixel);
+			
+			struct Complex z = z0;
+			size_t i = 0;
+			for (; i < MANDELBROT_ITER; z = sum_Complex(mlt_Complex(z, z), z0), i++) {
+				if (abs2(z) > MANDELBROT_BORDER2) {
+					break;
+				}
+			}
+
+			GLfloat	t1 = (GLfloat) i / MANDELBROT_ITER,
+					t0 = 1 - t1;
+			cur_pixel[2] = (GLfloat)1.		* t0 * t0 * t0;
+			cur_pixel[0] = (GLfloat)6.75	* t1 * t0 * t0;
+			cur_pixel[1] = (GLfloat)6.75	* t1 * t1 * t0;
 		}
 	}
 }
@@ -100,7 +97,7 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 	glViewport(0, 0, context_ptr->w, context_ptr->h);
 	size_t new_size = context_ptr->w * context_ptr->h * 3 * sizeof(*context_ptr->pixels);
 	if (new_size > context_ptr->size) {
-		context_ptr->size = max(new_size, context_ptr->size * 2);
+		context_ptr->size = max(context_ptr->size * 2, new_size);
 		void *new_pixels = realloc(context_ptr->pixels, context_ptr->size);
 		if (!new_pixels) { fprintf(stderr, "I can't fix that\n"); PRINT_LINE(); return; }
 		context_ptr->pixels = new_pixels;
@@ -158,6 +155,7 @@ int run_Mandelbrot() {
 	#define FINAL_CODE	\
 	glfwTerminate();
 
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "FPS: ", 0, 0);
 	if (!win) { CLEAR_RESOURCES(); return glfwGetError(0); }
 	#undef FINAL_CODE
