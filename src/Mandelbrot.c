@@ -1,4 +1,5 @@
 #include "Mandelbrot.h"
+#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
 
@@ -26,7 +27,7 @@ static void error_callback(int err, char const *desc) {
 }
 
 struct Mandelbrot_context {
-	size_t size; // TODO
+	size_t size;
 	GLfloat	(*pixels)[3],
 			scale,
 			x_off,
@@ -39,7 +40,7 @@ struct Mandelbrot_context {
 #define MANDELBROT_BORDER2	((GLfloat)4)
 static void update_context(struct Mandelbrot_context *context_ptr) {
 	assert(context_ptr);
-	assert(context_ptr->size % 64 == 0); // TODO
+	assert(context_ptr->size % 64 == 0);
 
 	__m512	border2		= _mm512_set1_ps(MANDELBROT_BORDER2),
 			prog		= _mm512_setr_ps(	0,		1,		2,		3,
@@ -86,7 +87,7 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it + i);
 				GLfloat	t1 = (GLfloat)iter_arr[i] / MANDELBROT_ITER,
 						t0 = 1 - t1;
-				context_ptr->pixels[cur_ind][2] = 1				* t0 * t0 * t0;
+				context_ptr->pixels[cur_ind][2] = 1				* t0 * t0 * t0;	// TODO -
 				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t0 * t0;
 				context_ptr->pixels[cur_ind][0] = (GLfloat)6.75	* t1 * t1 * t0;
 			}
@@ -116,25 +117,24 @@ static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int sca
 	}
 }
 
-/*
-static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
+static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 	assert(win);
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	assert(context_ptr);
 
-	context_ptr->w = w;
+	context_ptr->w = (w + 63) & ~63;
 	context_ptr->h = h;
-	glViewport(0, 0, context_ptr->w, context_ptr->h);
-	size_t new_size = context_ptr->w * context_ptr->h * 3 * sizeof(*context_ptr->pixels);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, context_ptr->w);
+	glViewport(0, 0, w, context_ptr->h); // I intentionally pass real width, not buffer width
+	size_t new_size = (size_t)(context_ptr->w * context_ptr->h) * sizeof(*context_ptr->pixels);
 	if (new_size > context_ptr->size) {
 		context_ptr->size = max(context_ptr->size * 2, new_size);
 		void *new_pixels = realloc(context_ptr->pixels, context_ptr->size);
-		if (!new_pixels) { fprintf(stderr, "I can't fix that\n"); PRINT_LINE(); return; }
+		if (!new_pixels) { fprintf(stderr, "I can't fix that, because glfwTerminate is not reenterable\n"); PRINT_LINE(); return; }
 		context_ptr->pixels = new_pixels;
 	}
 }
-*/
 
 #define FINAL_CODE
 
@@ -165,7 +165,6 @@ int run_Mandelbrot() {
 	#define FINAL_CODE	\
 	glfwTerminate();
 
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "FPS: ", 0, 0);
 	if (!win) { CLEAR_RESOURCES(); return glfwGetError(0); }
 	#undef FINAL_CODE
@@ -178,7 +177,9 @@ int run_Mandelbrot() {
 
 	struct Mandelbrot_context context = {};
 	glfwGetFramebufferSize(win, &context.w, &context.h);
-	glViewport(0, 0, context.w, context.h);
+	glViewport(0, 0, context.w, context.h); // I intentionally pass real width, not buffer width
+	context.w = (context.w + 63) & ~63;
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, context.w);
 	context.size = (size_t)(context.w * context.h) * sizeof(*context.pixels);
 	assert(context.size % 64 == 0);
 	context.pixels = malloc(context.size);
@@ -193,7 +194,7 @@ int run_Mandelbrot() {
 	context.y_off = 0;
 	glfwSetWindowUserPointer(win, &context);
 	glfwSetKeyCallback(win, keyboard_callback);
-	//glfwSetFramebufferSizeCallback(win, buff_resize_callback);
+	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
 	#define MAX_FPS_TITLE_LENGTH	((size_t)16)
 	#define SMOOTH_COEF				0.9
