@@ -2,7 +2,6 @@
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
 
-// TODO - Make error handling
 // TODO - Possible use BGRA
 
 #define GL_CALL(gl_func, ...)											\
@@ -68,25 +67,28 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 				__m512 abs2 = _mm512_mul_ps(x, x);
 				abs2 = _mm512_fmadd_ps(y, y, abs2);
 				__mmask16 new_mask = _mm512_cmp_ps_mask(abs2, border2, _CMP_LE_OQ);
-				is_small &= new_mask; // TODO - 
+				is_small &= new_mask;
 
 				__m512	new_x = _mm512_fmadd_ps(x, x, x0),
 						new_y = _mm512_fmadd_ps(x, y, y0);
 				new_x = _mm512_fnmadd_ps(y, y, new_x);
 				new_y = _mm512_fmadd_ps(x, y, new_y);
-				x = new_x;	// TODO - make two steps
-				y = new_y;
+
+				x = _mm512_fmadd_ps(new_x, new_x, x0);	// Two steps at a time!
+				y = _mm512_fmadd_ps(new_x, new_y, y0);
+				x = _mm512_fnmadd_ps(new_y, new_y, x);
+				y = _mm512_fmadd_ps(new_x, new_y, y);
 			}
 
-			GLsizei iter_arr[16];
-			_mm512_storeu_epi32(iter_arr, iter); // TODO
+			_Alignas(64) GLsizei iter_arr[16];
+			_mm512_store_epi32(iter_arr, iter);
 			for (GLsizei i = 0; i < 16; i++) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it + i);
 				GLfloat	t1 = (GLfloat)iter_arr[i] / MANDELBROT_ITER,
 						t0 = 1 - t1;
 				context_ptr->pixels[cur_ind][2] = 1				* t0 * t0 * t0;
-				context_ptr->pixels[cur_ind][0] = (GLfloat)6.75	* t1 * t0 * t0;
-				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t1 * t0;
+				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t0 * t0;
+				context_ptr->pixels[cur_ind][0] = (GLfloat)6.75	* t1 * t1 * t0;
 			}
 		}
 	}
@@ -140,7 +142,7 @@ static int update_frame(GLFWwindow *win) {
 	assert(win);
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
-	update_context(context_ptr); // TODO -
+	update_context(context_ptr); // TODO - Disimprovement
 	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_RGB, GL_FLOAT, context_ptr->pixels);
 	glfwSwapBuffers(win);
 
