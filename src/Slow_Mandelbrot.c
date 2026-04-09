@@ -1,4 +1,4 @@
-#include "Slow_Mandelbrot.h"
+#include "Mandelbrot.h"
 #include <GLFW/glfw3.h>
 
 #define GL_CALL(gl_func, ...)											\
@@ -138,7 +138,7 @@ static int update_frame(GLFWwindow *win) {
 #define DEFAULT_WIN_W	1024
 #define DEFAULT_WIN_H	768
 
-int run_Slow_Mandelbrot() {
+int run_Mandelbrot() {
 	#define FINAL_CODE
 
 	glfwSetErrorCallback(error_callback);
