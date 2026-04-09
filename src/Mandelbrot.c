@@ -87,9 +87,9 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it + i);
 				GLfloat	t1 = (GLfloat)iter_arr[i] / MANDELBROT_ITER,
 						t0 = 1 - t1;
-				context_ptr->pixels[cur_ind][2] = 1				* t0 * t0 * t0;	// TODO -
+				context_ptr->pixels[cur_ind][0] = 1				* t0 * t0 * t0;	// TODO -
 				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t0 * t0;
-				context_ptr->pixels[cur_ind][0] = (GLfloat)6.75	* t1 * t1 * t0;
+				context_ptr->pixels[cur_ind][2] = (GLfloat)6.75	* t1 * t1 * t0;
 			}
 		}
 	}
@@ -143,7 +143,7 @@ static int update_frame(GLFWwindow *win) {
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	update_context(context_ptr); // TODO - Disimprovement
-	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_RGB, GL_FLOAT, context_ptr->pixels);
+	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_BGR, GL_FLOAT, context_ptr->pixels);
 	glfwSwapBuffers(win);
 
 	int glfw_error = glfwGetError(0);
