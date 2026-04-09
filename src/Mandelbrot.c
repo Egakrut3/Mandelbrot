@@ -1,9 +1,6 @@
 #include "Mandelbrot.h"
-#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
-
-// TODO - Possible use BGRA
 
 #define GL_CALL(gl_func, ...)											\
 do {																	\
