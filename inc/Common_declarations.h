@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 
 #ifdef _DEBUG
 #define ON_DEBUG(...) __VA_ARGS__
@@ -22,7 +23,7 @@ do {						\
 #define PRINT_LINE()											\
 do {															\
 	fprintf(stderr, __FILE__ ":%d: %s\n", __LINE__, __func__);	\
-} while (false);
+} while (false)
 
 #define CHECK_FUNC(func, ...)											\
 do {																	\

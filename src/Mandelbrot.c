@@ -1,8 +1,8 @@
 #include "Mandelbrot.h"
-#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
 
+// TODO - Make error handling
 // TODO - Possible use BGRA
 
 #define GL_CALL(gl_func, ...)											\
@@ -18,7 +18,7 @@ do {																	\
 		CLEAR_RESOURCES();												\
 		return (int)__cur_err_val;										\
 	}																	\
-} while (false);
+} while (false)
 
 
 #define GLFW_FAILED_TO_INIT	0x100
@@ -26,32 +26,34 @@ static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
-#define MANDELBROT_ITER		((size_t) 32)
-#define MANDELBROT_BORDER2	2 * 2
-
-
-
 struct Mandelbrot_context {
-	GLfloat	*pixels,
+	size_t size; // TODO
+	GLfloat	(*pixels)[3],
 			scale,
 			x_off,
 			y_off;
-	size_t size;
 	GLsizei	w,
 			h;
 };
 
+#define MANDELBROT_ITER		((size_t) 32)
+#define MANDELBROT_BORDER2	((GLfloat)4)
 static void update_context(struct Mandelbrot_context *context_ptr) {
 	assert(context_ptr);
-	assert(context_ptr->w % 16 == 0);
+	assert(context_ptr->size % 64 == 0); // TODO
 
-	__m512	border2 	= _mm512_set1_ps(MANDELBROT_BORDER2),
-			prog		= _mm512_set_ps(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
+	__m512	border2		= _mm512_set1_ps(MANDELBROT_BORDER2),
+			prog		= _mm512_setr_ps(	0,		1,		2,		3,
+											4,		5,		6,		7,
+											8,		9,		10,	11,
+											12,	13,	14,	15),
 			x_inc		= _mm512_set1_ps(16 * context_ptr->scale),
 			y_inc		= _mm512_set1_ps(context_ptr->scale),
-			start_x 	= _mm512_fmadd_ps(prog, y_inc, _mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
+			start_x 	= _mm512_fmadd_ps(prog, y_inc,
+						_mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
 			cur_y		= _mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
 	__m512i iter_inc	= _mm512_set1_epi32(1);
+	
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++, cur_y = _mm512_add_ps(cur_y, y_inc)) {
 		__m512 cur_x = start_x;
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it += 16, cur_x = _mm512_add_ps(cur_x, x_inc)) {
@@ -61,11 +63,12 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 					y	= cur_y;
 			__m512i	iter = _mm512_setzero_epi32();
 			__mmask16 is_small = 0xFFFF;
+
 			for (size_t i = 0; i < MANDELBROT_ITER and is_small; i++, iter = _mm512_mask_add_epi32(iter, is_small, iter, iter_inc)) {
 				__m512 abs2 = _mm512_mul_ps(x, x);
 				abs2 = _mm512_fmadd_ps(y, y, abs2);
 				__mmask16 new_mask = _mm512_cmp_ps_mask(abs2, border2, _CMP_LE_OQ);
-				is_small &= new_mask;
+				is_small &= new_mask; // TODO - 
 
 				__m512	new_x = _mm512_fmadd_ps(x, x, x0),
 						new_y = _mm512_fmadd_ps(x, y, y0);
@@ -75,18 +78,39 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 				y = new_y;
 			}
 
-			GLsizei iters[16] = {};
-			_mm512_storeu_epi32(iters, iter); // TODO
+			GLsizei iter_arr[16];
+			_mm512_storeu_epi32(iter_arr, iter); // TODO
 			for (GLsizei i = 0; i < 16; i++) {
-				GLfloat *cur_pixel = context_ptr->pixels + (y_it * context_ptr->w + x_it + i) * 3;
-				//fprintf(stderr, "Iter: %d\n", iters[i]);
-				GLfloat	t1 = (GLfloat) iters[i] / MANDELBROT_ITER,
+				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it + i);
+				GLfloat	t1 = (GLfloat)iter_arr[i] / MANDELBROT_ITER,
 						t0 = 1 - t1;
-				cur_pixel[2] = (GLfloat)1		* t0 * t0 * t0;
-				cur_pixel[0] = (GLfloat)6.75	* t1 * t0 * t0;
-				cur_pixel[1] = (GLfloat)6.75	* t1 * t1 * t0;
+				context_ptr->pixels[cur_ind][2] = 1				* t0 * t0 * t0;
+				context_ptr->pixels[cur_ind][0] = (GLfloat)6.75	* t1 * t0 * t0;
+				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t1 * t0;
 			}
 		}
+	}
+}
+
+#define DEFAULT_SCALE	((GLfloat)0.003)
+#define SCALE_MLT		((GLfloat)1.1)
+#define PIXEL_STEP		100
+static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int scancode, int action, int mods) {
+	assert(win);
+
+	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
+	assert(context_ptr);
+
+	if (action == GLFW_PRESS) {
+		if (mods & GLFW_MOD_SHIFT) {
+			if (key == GLFW_KEY_EQUAL)	{ context_ptr->scale /= SCALE_MLT; }
+			if (key == GLFW_KEY_MINUS)	{ context_ptr->scale *= SCALE_MLT; }
+		}
+
+		if (key == GLFW_KEY_RIGHT)	{ context_ptr->x_off += context_ptr->scale * PIXEL_STEP; }
+		if (key == GLFW_KEY_LEFT)	{ context_ptr->x_off -= context_ptr->scale * PIXEL_STEP; }
+		if (key == GLFW_KEY_UP)		{ context_ptr->y_off += context_ptr->scale * PIXEL_STEP; }
+		if (key == GLFW_KEY_DOWN)	{ context_ptr->y_off -= context_ptr->scale * PIXEL_STEP; }
 	}
 }
 
@@ -109,29 +133,6 @@ static void buff_resize_callback(GLFWwindow *win, GLsizei w, GLsizei h) {
 	}
 }
 */
-
-#define DEFAULT_SCALE	((GLfloat)0.003)
-#define SCALE_MLT		((GLfloat)1.1)
-#define PIXEL_STEP		100
-static void keyboard_callback(GLFWwindow *win, int key, int scancode, int action, int mods) {
-	assert(win);
-	if (scancode) {}		// Disable warning
-
-	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
-	assert(context_ptr);
-
-	if (action == GLFW_PRESS) {
-		if (mods & GLFW_MOD_SHIFT) {
-			if (key == GLFW_KEY_EQUAL)	{ context_ptr->scale /= SCALE_MLT; }
-			if (key == GLFW_KEY_MINUS)	{ context_ptr->scale *= SCALE_MLT; }
-		}
-
-		if (key == GLFW_KEY_RIGHT)	{ context_ptr->x_off += context_ptr->scale * PIXEL_STEP; }
-		if (key == GLFW_KEY_LEFT)	{ context_ptr->x_off -= context_ptr->scale * PIXEL_STEP; }
-		if (key == GLFW_KEY_UP)		{ context_ptr->y_off += context_ptr->scale * PIXEL_STEP; }
-		if (key == GLFW_KEY_DOWN)	{ context_ptr->y_off -= context_ptr->scale * PIXEL_STEP; }
-	}
-}
 
 #define FINAL_CODE
 
@@ -176,8 +177,9 @@ int run_Mandelbrot() {
 	struct Mandelbrot_context context = {};
 	glfwGetFramebufferSize(win, &context.w, &context.h);
 	glViewport(0, 0, context.w, context.h);
-	context.size = (size_t)(context.w * context.h * 3) * sizeof(*context.pixels);
-	context.pixels = aligned_alloc(64, context.size);
+	context.size = (size_t)(context.w * context.h) * sizeof(*context.pixels);
+	assert(context.size % 64 == 0);
+	context.pixels = malloc(context.size);
 	if (!context.pixels) { CLEAR_RESOURCES(); return errno; }
 	#undef FINAL_CODE
 	#define FINAL_CODE		\
@@ -185,9 +187,11 @@ int run_Mandelbrot() {
 	glfwDestroyWindow(win);	\
 	glfwTerminate();
 	context.scale = DEFAULT_SCALE;
+	context.x_off = 0;
+	context.y_off = 0;
 	glfwSetWindowUserPointer(win, &context);
-	//glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 	glfwSetKeyCallback(win, keyboard_callback);
+	//glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
 	#define MAX_FPS_TITLE_LENGTH	((size_t)16)
 	#define SMOOTH_COEF				0.9
@@ -211,7 +215,6 @@ int run_Mandelbrot() {
 	}
 
 	int glfw_error = glfwGetError(0);
-	getchar();
 	CLEAR_RESOURCES();
 	return glfw_error == GLFW_NO_ERROR ? 0 : glfw_error;
 
