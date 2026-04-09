@@ -8,9 +8,11 @@ OBJ_DIR	= bin/
 OBJ_SUF	= .obj
 make_obj_path	= $(addprefix $(OBJ_DIR), $(addsuffix $(OBJ_SUF),	$(1)))
 
-SRC = Mandelbrot main
+SRC			= Mandelbrot main
+SLOW_SRC	= Slow_Mandelbrot main
 
-TARGET = Test
+TARGET		= Test
+SLOW_TARGET	= Slow_Test
 
 C_OPTIONS	=	-D_DEBUG -D__STDC_WANT_LIB_EXT1__ -ggdb3 -std=c23 -O3 -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations					\
 				-Wcast-align -Wcast-qual -Wchar-subscripts -Wconversion -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness			\
@@ -23,7 +25,7 @@ C_OPTIONS	=	-D_DEBUG -D__STDC_WANT_LIB_EXT1__ -ggdb3 -std=c23 -O3 -mavx512f -Wal
 CPP_OPTIONS	=	-Weffc++ -Wc++14-compat -Woverloaded-virtual -Wconditionally-supported -Wctor-dtor-privacy -Wnon-virtual-dtor -Wsign-promo -Wstrict-null-sentinel	\
 				-Wsuggest-override -Wno-literal-suffix -Wno-old-style-cast -fsized-deallocation
 
-.PHONY: all prepare test clean commit
+.PHONY: all prepare test slow_test clean commit
 
 all: test
 
@@ -35,11 +37,19 @@ make_c_object = $(call make_obj_path, $(1)): $(call make_c_path, $(1)) | prepare
 
 $(foreach src, $(SRC), $(eval $(call make_c_object, $(src))))
 
+$(call make_c_object, Slow_Mandelbrot)
+
 $(TARGET): $(call make_obj_path, $(SRC))
 	@gcc $(C_OPTIONS) $^ -lglfw -lGL -o $(TARGET)
 
+$(SLOW_TARGET): $(call make_obj_path, $(SLOW_SRC))
+	@gcc $(C_OPTIONS) $^ -lglfw -lGL -o $(SLOW_TARGET)
+
 test: $(TARGET)
 	@prime-run ./$(TARGET)
+
+slow_test: $(SLOW_TARGET)
+	@prime-run ./$(SLOW_TARGET)
 
 clean:
 	@rm -fr	$(OBJ_DIR) $(TARGET)
