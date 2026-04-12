@@ -28,6 +28,7 @@ static void error_callback(int err, char const *desc) {
 struct Mandelbrot_context {
 	size_t	size;
 	GLsizei	w,
+			buff_w,
 			h;
 	GLfloat	(*pixels)[3],
 			scale,
@@ -46,11 +47,12 @@ static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	assert(context_ptr);
 
-	glViewport(0, 0, w, h); // I intentionally pass real width, not buffer width
-	context_ptr->w = get_packed_aligned(w);
+	context_ptr->w = w;
 	context_ptr->h = h;
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, context_ptr->w);
-	size_t new_size = (size_t)(context_ptr->w * context_ptr->h) * sizeof(*context_ptr->pixels);
+	glViewport(0, 0, context_ptr->w, context_ptr->h);
+	context_ptr->buff_w = get_packed_aligned(context_ptr->w);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, context_ptr->buff_w);
+	size_t new_size = (size_t)(context_ptr->buff_w * context_ptr->h) * sizeof(*context_ptr->pixels);
 
 	if (new_size > context_ptr->size) {
 		context_ptr->size = max(context_ptr->size * 2, new_size);
@@ -98,6 +100,7 @@ static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 static_assert(PACKED_SIZE % sizeof(GLfloat) == 0);
 static void update_context(struct Mandelbrot_context *context_ptr) {
 	assert(context_ptr);
+	assert(context_ptr->buff_w % PACKED_CNT == 0);
 
 	__m512	border2		=	_mm512_set1_ps(MANDELBROT_BORDER2),
 			prog		=	_mm512_setr_ps(	0,		1,		2,		3,
@@ -110,17 +113,15 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 							_mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
 			cur_y		=	_mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
 	__m512i iter_inc	=	_mm512_set1_epi32(1);
-	
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++, cur_y = _mm512_add_ps(cur_y, y_inc)) {
 		__m512 cur_x = start_x;
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it += PACKED_CNT, cur_x = _mm512_add_ps(cur_x, x_inc)) {
-			__m512	x0	= cur_x,
-					x	= x0,
-					y0	= cur_y,
-					y	= y0;
-			__m512i	iter = _mm512_setzero_epi32();
-			__mmask16 is_small = 0xFF'FF;
-
+			__m512	x0			= cur_x,
+					x			= x0,
+					y0			= cur_y,
+					y			= y0;
+			__m512i	iter		= _mm512_setzero_epi32();
+			__mmask16 is_small	= 0xFF'FF;
 			for (size_t i = 0; i < MANDELBROT_ITER and is_small; i++, iter = _mm512_mask_add_epi32(iter, is_small, iter, iter_inc)) {
 				__m512 abs2 = _mm512_mul_ps(x, x);
 				abs2 = _mm512_fmadd_ps(y, y, abs2);
@@ -141,7 +142,7 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 			_Alignas(PACKED_SIZE) GLsizei iter_arr[PACKED_CNT];
 			_mm512_store_epi32(iter_arr, iter);
 			for (size_t i = 0; i < PACKED_CNT; i++) {
-				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it) + i;
+				size_t cur_ind = (size_t)(y_it * context_ptr->buff_w + x_it) + i;
 				store_BGR_color(iter_arr[i], context_ptr->pixels[cur_ind]);
 			}
 		}
@@ -195,10 +196,10 @@ int run_Mandelbrot() {
 
 	struct Mandelbrot_context context = {};
 	glfwGetFramebufferSize(win, &context.w, &context.h);
-	glViewport(0, 0, context.w, context.h); // I intentionally pass real width, not buffer width
-	context.w = get_packed_aligned(context.w);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, context.w);
-	context.size = (size_t)(context.w * context.h) * sizeof(*context.pixels);
+	glViewport(0, 0, context.w, context.h);
+	context.buff_w = get_packed_aligned(context.w);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, context.buff_w);
+	context.size = (size_t)(context.buff_w * context.h) * sizeof(*context.pixels);
 
 	context.pixels = malloc(context.size);
 	if (!context.pixels) { CLEAR_RESOURCES(); return errno; }
