@@ -94,7 +94,7 @@ static GLfloat abs2(struct Complex z) {
 	return z.x * z.x + z.y * z.y;
 }
 
-#define MANDELBROT_ITER	((size_t) 32)
+#define MANDELBROT_ITER	((size_t) 64)
 static void store_BGR_color(size_t iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
 			t0 = 1 - t1;

@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #define ON_DEBUG(...) __VA_ARGS__
 #else
 #define ON_DEBUG(...)
