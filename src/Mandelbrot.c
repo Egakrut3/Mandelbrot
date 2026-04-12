@@ -84,7 +84,7 @@ static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int sca
 	}
 }
 
-#define MANDELBROT_ITER	((size_t) 32)
+#define MANDELBROT_ITER	32
 static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
 			t0 = 1 - t1;
