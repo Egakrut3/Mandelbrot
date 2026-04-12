@@ -25,41 +25,55 @@ static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
+struct BGR_color {
+	GLfloat arr[3];
+};
+
 struct Mandelbrot_context {
-	size_t size;
-	GLfloat	(*pixels)[3],
-			scale,
-			x_off,
-			y_off;
-	GLsizei	w,
-			h;
+	size_t				size;
+	struct BGR_color	*pixels;
+	GLfloat				scale,
+						x_off,
+						y_off;
+	GLsizei				w,
+						h;
 };
 
 #define MANDELBROT_ITER		((size_t) 32)
+static struct BGR_color get_BGR_color(GLsizei iter) {
+	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
+			t0 = 1 - t1;
+	struct BGR_color ans = {};
+	ans.arr[0] = 1				* t0 * t0 * t0;
+	ans.arr[1] = (GLfloat)6.75	* t1 * t0 * t0;
+	ans.arr[2] = (GLfloat)6.75	* t1 * t1 * t0;
+	return ans;
+}
+
 #define MANDELBROT_BORDER2	((GLfloat)4)
 static void update_context(struct Mandelbrot_context *context_ptr) {
 	assert(context_ptr);
 	assert(context_ptr->size % 64 == 0);
 
-	__m512	border2		= _mm512_set1_ps(MANDELBROT_BORDER2),
-			prog		= _mm512_setr_ps(	0,		1,		2,		3,
+	__m512	border2		=	_mm512_set1_ps(MANDELBROT_BORDER2),
+			prog		=	_mm512_setr_ps(	0,		1,		2,		3,
 											4,		5,		6,		7,
-											8,		9,		10,	11,
-											12,	13,	14,	15),
-			x_inc		= _mm512_set1_ps(16 * context_ptr->scale),
-			y_inc		= _mm512_set1_ps(context_ptr->scale),
-			start_x 	= _mm512_fmadd_ps(prog, y_inc,
-						_mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
-			cur_y		= _mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
-	__m512i iter_inc	= _mm512_set1_epi32(1);
+											8,		9,		10,		11,
+											12,		13,		14,		15),
+			x_inc		=	_mm512_set1_ps(16 * context_ptr->scale),
+			y_inc		=	_mm512_set1_ps(context_ptr->scale),
+			start_x 	=	_mm512_fmadd_ps(prog, y_inc,
+							_mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
+			cur_y		=	_mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
+	__m512i iter_inc	=	_mm512_set1_epi32(1);
 	
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++, cur_y = _mm512_add_ps(cur_y, y_inc)) {
 		__m512 cur_x = start_x;
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it += 16, cur_x = _mm512_add_ps(cur_x, x_inc)) {
 			__m512	x0	= cur_x,
-					x	= cur_x,
+					x	= x0,
 					y0	= cur_y,
-					y	= cur_y;
+					y	= y0;
 			__m512i	iter = _mm512_setzero_epi32();
 			__mmask16 is_small = 0xFFFF;
 
@@ -84,11 +98,7 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 			_mm512_store_epi32(iter_arr, iter);
 			for (GLsizei i = 0; i < 16; i++) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it + i);
-				GLfloat	t1 = (GLfloat)iter_arr[i] / MANDELBROT_ITER,
-						t0 = 1 - t1;
-				context_ptr->pixels[cur_ind][0] = 1				* t0 * t0 * t0;	// TODO -
-				context_ptr->pixels[cur_ind][1] = (GLfloat)6.75	* t1 * t0 * t0;
-				context_ptr->pixels[cur_ind][2] = (GLfloat)6.75	* t1 * t1 * t0;
+				context_ptr->pixels[cur_ind] = get_BGR_color(iter_arr[i]);
 			}
 		}
 	}
@@ -160,8 +170,8 @@ static int update_frame(GLFWwindow *win) {
 
 #undef FINAL_CODE
 
-#define DEFAULT_WIN_W	1024
-#define DEFAULT_WIN_H	768
+#define DEFAULT_WIN_W	800
+#define DEFAULT_WIN_H	600
 int run_Mandelbrot() {
 	#define FINAL_CODE
 
@@ -171,7 +181,7 @@ int run_Mandelbrot() {
 	#define FINAL_CODE	\
 	glfwTerminate();
 
-	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "FPS: ", 0, 0);
+	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "", 0, 0);
 	if (!win) { CLEAR_RESOURCES(); return glfwGetError(0); }
 	#undef FINAL_CODE
 	#define FINAL_CODE		\
@@ -202,25 +212,25 @@ int run_Mandelbrot() {
 	glfwSetKeyCallback(win, keyboard_callback);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 
-	#define MAX_FPS_TITLE_LENGTH	((size_t)16)
-	#define SMOOTH_COEF				0.9
-	double	FPS = 0,
-			last_FPS_rep_time	= glfwGetTime(),
-			frm_beg_time		= last_FPS_rep_time;
+	#define MAX_FPS_TITLE_LENGTH	((size_t)64)
+	#define FPS_REFRESH_TIME		((double)5)
+	size_t	frames_cnt			= 0;
+	double	last_FPS_rep_time	= glfwGetTime();
 	char FPS_title[MAX_FPS_TITLE_LENGTH] = "";
 	while (!glfwWindowShouldClose(win)) {
 		CHECK_FUNC(update_frame, win);
-		glfwWaitEvents();
+		++frames_cnt;
 
-		double cur_time = glfwGetTime();
-		FPS = FPS * SMOOTH_COEF + 1 / (cur_time - frm_beg_time) * (1 - SMOOTH_COEF);
-		if (cur_time - last_FPS_rep_time >= 1) {
-			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "FPS: %.2f", FPS);
+		double	cur_time	= glfwGetTime(),
+				pass_time	= cur_time - last_FPS_rep_time;
+		if (pass_time >= FPS_REFRESH_TIME) {
+			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "%zu frames in %.1f seconds = %.2f FPS", frames_cnt, FPS_REFRESH_TIME, (double) frames_cnt / pass_time);
 			glfwSetWindowTitle(win, FPS_title);
-			//fprintf(stderr, "FPS: %.2f\n", FPS);
 			last_FPS_rep_time = cur_time;
+			frames_cnt = 0;
 		}
-		frm_beg_time = cur_time;
+
+		glfwWaitEvents();
 	}
 
 	int glfw_error = glfwGetError(0);
