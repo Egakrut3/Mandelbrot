@@ -2,8 +2,8 @@
 #include <immintrin.h>
 #include <GLFW/glfw3.h>
 
-// #define NO_DRAWING
-// #define TESTING
+#define NO_DRAWING
+#define TESTING
 
 #ifdef TESTING
 #include <math.h>
@@ -275,13 +275,13 @@ int run_Mandelbrot() {
 
 #ifdef TESTING
 
-	#define NEED_SAMPLES 3
+	#define NEED_SAMPLES 0x80
 	size_t left_samples = NEED_SAMPLES;
 	fprintf(output_ptr, "CPF\n");
 
 #endif
 
-	#define CYC_REFRESH_CNT ((size_t)0x100)
+	#define CYC_REFRESH_CNT ((size_t)0x20)
 	size_t	frames_cnt		= 0,
 			last_rep_cyc	= __rdtsc();
 
