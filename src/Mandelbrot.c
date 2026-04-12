@@ -102,7 +102,7 @@ static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int sca
 
 #endif
 
-#define MANDELBROT_ITER		((size_t)0x20)
+#define MANDELBROT_ITER		((size_t)0x40)
 #define MANDELBROT_BORDER2	((GLfloat)4)
 static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
@@ -281,7 +281,7 @@ int run_Mandelbrot() {
 
 #ifdef TESTING
 
-	#define NEED_SAMPLES 64
+	#define NEED_SAMPLES 3
 	size_t left_samples = NEED_SAMPLES;
 	fprintf(output_ptr, "CPF\n");
 
@@ -306,14 +306,12 @@ int run_Mandelbrot() {
 
 			fprintf(output_ptr, "%.2f\n", CPF);
 			if (!(--left_samples)) { break; }
-			fprintf(stderr, "%zu\n", left_samples);
 
 #else
 
 			fprintf(stderr, "%zu frames in %zu cycles = %.2f CPF\n", frames_cnt, pass_cyc, CPF);
 
 #endif
-
 			frames_cnt		= 0;
 			last_rep_cyc	= __rdtsc();
 		}
@@ -342,7 +340,6 @@ int run_Mandelbrot() {
 
 			fprintf(output_ptr, "%.2f\n", CPF);
 			if (!(--left_samples)) { break; }
-			fprintf(stderr, "%zu\n", left_samples);
 
 #else
 
