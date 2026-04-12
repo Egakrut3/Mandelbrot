@@ -3,7 +3,7 @@
 #include <GLFW/glfw3.h>
 
 // #define NO_DRAWING
-#define TESTING
+// #define TESTING
 
 #ifdef TESTING
 #include <math.h>
@@ -102,7 +102,7 @@ static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int sca
 
 #endif
 
-#define MANDELBROT_ITER		((size_t)0x40)
+#define MANDELBROT_ITER		((size_t)0x20)
 #define MANDELBROT_BORDER2	((GLfloat)4)
 static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
@@ -174,13 +174,7 @@ static int update_frame(GLFWwindow *win) {
 
 	struct Mandelbrot_context *context_ptr = glfwGetWindowUserPointer(win);
 	update_context(context_ptr); // TODO - Disimprovement
-
-#ifndef NO_DRAWING
-
 	GL_CALL(glDrawPixels, context_ptr->w, context_ptr->h, GL_BGR, GL_FLOAT, context_ptr->pixels);
-
-#endif
-
 	glfwSwapBuffers(win);
 
 	int glfw_error = glfwGetError(0);
@@ -287,7 +281,7 @@ int run_Mandelbrot() {
 
 #endif
 
-	#define CYC_REFRESH_CNT ((size_t)0x400)
+	#define CYC_REFRESH_CNT ((size_t)0x100)
 	size_t	frames_cnt		= 0,
 			last_rep_cyc	= __rdtsc();
 
