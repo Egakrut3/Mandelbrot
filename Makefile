@@ -46,10 +46,10 @@ $(SLOW_TARGET): $(call make_obj_path, $(SLOW_SRC))
 	@gcc $(C_OPTIONS) $^ -lglfw -lGL -o $(SLOW_TARGET)
 
 test: $(TARGET)
-	@prime-run ./$(TARGET)
+	@prime-run taskset -c 15 ./$(TARGET)
 
 slow_test: $(SLOW_TARGET)
-	@prime-run ./$(SLOW_TARGET)
+	@prime-run taskset -c 15 ./$(SLOW_TARGET)
 
 clean:
 	@rm -fr	$(OBJ_DIR) $(TARGET)

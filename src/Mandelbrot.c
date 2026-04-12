@@ -1,8 +1,17 @@
 #include "Mandelbrot.h"
-#include <GLFW/glfw3.h>
 #include <immintrin.h>
+#include <GLFW/glfw3.h>
 
 // #define NO_DRAWING
+#define TESTING
+
+#ifdef TESTING
+#include <math.h>
+#elifdef NO_DRAWING
+#include <math.h>
+#endif
+
+#ifndef NO_DRAWING
 
 #define GL_CALL(gl_func, ...)											\
 do {																	\
@@ -19,14 +28,15 @@ do {																	\
 	}																	\
 } while (false)
 
-
 #define GLFW_FAILED_TO_INIT	0x100
 static void error_callback(int err, char const *desc) {
 	fprintf(stderr, "GLFW Error %d: %s\n", err, desc);
 }
 
+#endif
+
 struct Mandelbrot_context {
-	size_t	size;
+	size_t	buff_size;
 	GLsizei	w,
 			buff_w,
 			h;
@@ -36,10 +46,18 @@ struct Mandelbrot_context {
 			y_off;
 };
 
-#define PACKED_SIZE	0x40
+#define PACKED_SIZE	((size_t)0x40)
+#define PACKED_CNT	((GLsizei)(PACKED_SIZE / sizeof(GLfloat)))
+static_assert(PACKED_SIZE % sizeof(GLfloat) == 0);
 static GLsizei get_packed_aligned(GLsizei size) {
-	return (size + (PACKED_SIZE - 1)) & ~(PACKED_SIZE - 1);
+	return (size + (GLsizei)(PACKED_SIZE - 1)) & ~(GLsizei)(PACKED_SIZE - 1);
 }
+
+#define DEFAULT_SCALE	((GLfloat)0.003)
+#define SCALE_MLT		((GLfloat)1.1)
+#define TEST_SCALE_CNT	((GLfloat)-0x20)
+
+#ifndef NO_DRAWING
 
 static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 	assert(win);
@@ -52,19 +70,17 @@ static void buff_resize_callback(GLFWwindow *win, int w, int h) {
 	glViewport(0, 0, context_ptr->w, context_ptr->h);
 	context_ptr->buff_w = get_packed_aligned(context_ptr->w);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, context_ptr->buff_w);
-	size_t new_size = (size_t)(context_ptr->buff_w * context_ptr->h) * sizeof(*context_ptr->pixels);
+	size_t new_buff_size = (size_t)(context_ptr->buff_w * context_ptr->h) * sizeof(*context_ptr->pixels);
 
-	if (new_size > context_ptr->size) {
-		context_ptr->size = max(context_ptr->size * 2, new_size);
-		void *new_pixels = realloc(context_ptr->pixels, context_ptr->size);
+	if (new_buff_size > context_ptr->buff_size) {
+		context_ptr->buff_size = max(context_ptr->buff_size * 2, new_buff_size);
+		void *new_pixels = realloc(context_ptr->pixels, context_ptr->buff_size);
 		if (!new_pixels) { PRINT_LINE(); return; } // I can't handle it, because glfwTerminate is not reenterable
 		context_ptr->pixels = new_pixels;
 	}
 }
 
-#define DEFAULT_SCALE	((GLfloat)0.003)
-#define SCALE_MLT		((GLfloat)1.1)
-#define PIXEL_STEP		160
+#define PIXEL_STEP ((GLfloat)160)
 static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int scancode, int action, int mods) {
 	assert(win);
 
@@ -84,7 +100,10 @@ static void keyboard_callback(GLFWwindow *win, int key, [[maybe_unused]] int sca
 	}
 }
 
-#define MANDELBROT_ITER	32
+#endif
+
+#define MANDELBROT_ITER		((size_t)0x20)
+#define MANDELBROT_BORDER2	((GLfloat)4)
 static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
 			t0 = 1 - t1;
@@ -95,9 +114,6 @@ static void store_BGR_color(GLsizei iter, GLfloat dest[3]) {
 	return;
 }
 
-#define MANDELBROT_BORDER2	((GLfloat)4)
-#define PACKED_CNT			((GLsizei)(PACKED_SIZE / sizeof(GLfloat)))
-static_assert(PACKED_SIZE % sizeof(GLfloat) == 0);
 static void update_context(struct Mandelbrot_context *context_ptr) {
 	assert(context_ptr);
 	assert(context_ptr->buff_w % PACKED_CNT == 0);
@@ -151,6 +167,8 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 
 #define FINAL_CODE
 
+#ifndef NO_DRAWING
+
 static int update_frame(GLFWwindow *win) {
 	assert(win);
 
@@ -170,72 +188,177 @@ static int update_frame(GLFWwindow *win) {
 	return glfw_error == GLFW_NO_ERROR ? 0 : glfw_error;
 }
 
+#endif
+
 #undef FINAL_CODE
 
-#define DEFAULT_WIN_W	800
-#define DEFAULT_WIN_H	600
 int run_Mandelbrot() {
 	#define FINAL_CODE
+
+	FILE *output_ptr = fopen("Test_CPF.csv", "w");
+	if (!output_ptr) { CLEAR_RESOURCES(); return errno; }
+	#undef FINAL_CODE
+	#define FINAL_CODE	\
+	fclose(output_ptr);
+
+#ifndef NO_DRAWING
 
 	glfwSetErrorCallback(error_callback);
 
 	if (glfwInit() == GLFW_FALSE) { CLEAR_RESOURCES(); return glfwGetError(0); }
 	#undef FINAL_CODE
 	#define FINAL_CODE	\
-	glfwTerminate();
+	glfwTerminate();	\
+	fclose(output_ptr);
 
+	#define DEFAULT_WIN_W	800
+	#define DEFAULT_WIN_H	600
 	GLFWwindow *win = glfwCreateWindow(DEFAULT_WIN_W, DEFAULT_WIN_H, "", 0, 0);
 	if (!win) { CLEAR_RESOURCES(); return glfwGetError(0); }
 	#undef FINAL_CODE
 	#define FINAL_CODE		\
 	glfwDestroyWindow(win);	\
-	glfwTerminate();
+	glfwTerminate();		\
+	fclose(output_ptr);
 
 	glfwMakeContextCurrent(win);
 	glfwSwapInterval(1);
 
+#endif
+
 	struct Mandelbrot_context context = {};
+
+#ifdef NO_DRAWING
+
+	#define DEFAULT_BUFF_W	1000
+	#define DEFAULT_BUFF_H	750
+	context.w			= DEFAULT_BUFF_W;
+	context.h			= DEFAULT_BUFF_H;
+	context.buff_w		= get_packed_aligned(context.w);
+	context.buff_size	= (size_t)(context.buff_w * context.h) * sizeof(*context.pixels);
+
+	context.pixels = malloc(context.buff_size);
+	if (!context.pixels) { CLEAR_RESOURCES(); return errno; }
+	#undef FINAL_CODE
+	#define FINAL_CODE		\
+	free(context.pixels);	\
+	fclose(output_ptr);
+
+	context.scale = DEFAULT_SCALE * powf(SCALE_MLT, TEST_SCALE_CNT);
+	context.x_off = 0;
+	context.y_off = 0;
+
+#else
+
 	glfwGetFramebufferSize(win, &context.w, &context.h);
 	glViewport(0, 0, context.w, context.h);
 	context.buff_w = get_packed_aligned(context.w);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, context.buff_w);
-	context.size = (size_t)(context.buff_w * context.h) * sizeof(*context.pixels);
+	context.buff_size = (size_t)(context.buff_w * context.h) * sizeof(*context.pixels);
 
-	context.pixels = malloc(context.size);
+	context.pixels = malloc(context.buff_size);
 	if (!context.pixels) { CLEAR_RESOURCES(); return errno; }
 	#undef FINAL_CODE
 	#define FINAL_CODE		\
 	free(context.pixels);	\
 	glfwDestroyWindow(win);	\
-	glfwTerminate();
+	glfwTerminate();		\
+	fclose(output_ptr);
 
+#ifdef TESTING
+	context.scale = DEFAULT_SCALE * powf(SCALE_MLT, TEST_SCALE_CNT);
+#else
 	context.scale = DEFAULT_SCALE;
+#endif
+
 	context.x_off = 0;
 	context.y_off = 0;
 	glfwSetWindowUserPointer(win, &context);
 	glfwSetFramebufferSizeCallback(win, buff_resize_callback);
 	glfwSetKeyCallback(win, keyboard_callback);
 
-	#define MAX_FPS_TITLE_LENGTH	((size_t)0x40)
-	#define FPS_REFRESH_TIME		((double)5)
-	size_t	frames_cnt						= 0;
-	double	last_FPS_rep_time				= glfwGetTime();
-	char	FPS_title[MAX_FPS_TITLE_LENGTH]	= "";
+#endif
+
+#ifdef TESTING
+
+	#define NEED_SAMPLES 64
+	size_t left_samples = NEED_SAMPLES;
+	fprintf(output_ptr, "CPF\n");
+
+#endif
+
+	#define CYC_REFRESH_CNT ((size_t)0x400)
+	size_t	frames_cnt		= 0,
+			last_rep_cyc	= __rdtsc();
+
+#ifdef NO_DRAWING
+
+	while (1) {
+		update_context(&context);
+		frames_cnt++;
+
+		if (frames_cnt >= CYC_REFRESH_CNT) {
+			size_t	cur_cyc		= __rdtsc(),
+					pass_cyc	= cur_cyc - last_rep_cyc;
+			double	CPF			= (double)pass_cyc / (double)frames_cnt;
+
+#ifdef TESTING
+
+			fprintf(output_ptr, "%.2f\n", CPF);
+			if (!(--left_samples)) { break; }
+			fprintf(stderr, "%zu\n", left_samples);
+
+#else
+
+			fprintf(stderr, "%zu frames in %zu cycles = %.2f CPF\n", frames_cnt, pass_cyc, CPF);
+
+#endif
+
+			frames_cnt		= 0;
+			last_rep_cyc	= __rdtsc();
+		}
+	}
+
+#else
+
+#ifndef TESTING
+
+	#define MAX_CPF_TITLE_LENGTH ((size_t)0x40)
+	char CPF_title[MAX_CPF_TITLE_LENGTH] = {};
+
+#endif
+
+	glfwWaitEvents();
 	while (!glfwWindowShouldClose(win)) {
 		CHECK_FUNC(update_frame, win);
 		frames_cnt++;
 
-		double	cur_time	= glfwGetTime(),
-				pass_time	= cur_time - last_FPS_rep_time;
-		if (pass_time >= FPS_REFRESH_TIME) {
-			snprintf(FPS_title, MAX_FPS_TITLE_LENGTH, "%zu frames in %.1f seconds = %.2f FPS", frames_cnt, FPS_REFRESH_TIME, (double) frames_cnt / pass_time);
-			glfwSetWindowTitle(win, FPS_title);
-			frames_cnt = 0;
-			last_FPS_rep_time = cur_time;
+		if (frames_cnt >= CYC_REFRESH_CNT) {
+			size_t	cur_cyc		= __rdtsc(),
+					pass_cyc	= cur_cyc - last_rep_cyc;
+			double	CPF			= (double)pass_cyc / (double)frames_cnt;
+
+#ifdef TESTING
+
+			fprintf(output_ptr, "%.2f\n", CPF);
+			if (!(--left_samples)) { break; }
+			fprintf(stderr, "%zu\n", left_samples);
+
+#else
+
+			snprintf(CPF_title, MAX_CPF_TITLE_LENGTH, "%zu frames in %zu cycles = %.2f CPF\n", frames_cnt, pass_cyc, CPF);
+			glfwSetWindowTitle(win, CPF_title);
+
+#endif
+
+			frames_cnt		= 0;
+			last_rep_cyc	= __rdtsc();
 		}
 
 		glfwWaitEvents();
 	}
+
+#endif
 
 	int glfw_error = glfwGetError(0);
 	CLEAR_RESOURCES();
