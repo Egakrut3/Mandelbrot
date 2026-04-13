@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <immintrin.h>
 
-#define NO_DRAWING
+// #define NO_DRAWING
 // #define TESTING
 
 #ifdef TESTING
@@ -257,7 +257,7 @@ int run_Mandelbrot() {
 
 #endif
 
-	#define CYC_REFRESH_CNT ((size_t)0x10)
+	#define CYC_REFRESH_CNT ((size_t)0x40)
 	size_t	frames_cnt		= 0,
 			last_rep_cyc	= __rdtsc();
 
