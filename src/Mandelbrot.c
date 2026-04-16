@@ -2,8 +2,8 @@
 #include <immintrin.h>
 #include <GLFW/glfw3.h>
 
-// #define NO_DRAWING
-// #define TESTING
+#define NO_DRAWING
+#define TESTING
 
 #ifdef TESTING
 #include <math.h>

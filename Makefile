@@ -14,7 +14,7 @@ SLOW_SRC	= Slow_Mandelbrot main
 TARGET		= Test
 SLOW_TARGET	= Slow_Test
 
-C_OPTIONS	=	-D_DEBUG -D__STDC_WANT_LIB_EXT1__ -ggdb3 -std=c23 -O3 -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations					\
+C_OPTIONS	=	-D_DEBUG -D__STDC_WANT_LIB_EXT1__ -ggdb3 -std=c23 -Ofast -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations					\
 				-Wcast-align -Wcast-qual -Wchar-subscripts -Wconversion -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness			\
 				-Wformat=2 -Winline -Wlogical-op -Wopenmp-simd -Wpacked -Wpointer-arith -Winit-self -Wredundant-decls -Wshadow -Wsign-conversion						\
 				-Wstrict-overflow=2 -Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wswitch-default -Wswitch-enum -Wsync-nand -Wundef		\
