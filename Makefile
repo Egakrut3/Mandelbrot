@@ -16,7 +16,7 @@ SRC = Mandelbrot_GLFW Mandelbrot_run main
 
 TARGET = Test.elf
 
-C_OPTIONS	=	-D_DEBUG -ggdb3 -std=c23 -Ofast -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations -Wcast-align -Wcast-qual			\
+C_OPTIONS	=	-DNDEBUG -ggdb3 -std=c23 -O0 -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations -Wcast-align -Wcast-qual			\
 			-Wchar-subscripts -Wconversion -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op	\
 			-Wopenmp-simd -Wpacked -Wpointer-arith -Winit-self -Wredundant-decls -Wshadow -Wsign-conversion -Wstrict-overflow=2 -Wsuggest-attribute=noreturn	\
 			-Wsuggest-final-methods -Wsuggest-final-types -Wswitch-default -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast		\

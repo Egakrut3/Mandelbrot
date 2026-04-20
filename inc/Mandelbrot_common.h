@@ -5,7 +5,7 @@
 #include <GL/gl.h>
 
 // #define TESTING
-#define MANDELBROT_PACKED
+// #define MANDELBROT_PACKED
 
 #define DEFAULT_SCALE	((GLfloat)0.003)
 #define TEST_SCALE_CNT	((GLfloat)-0x20)

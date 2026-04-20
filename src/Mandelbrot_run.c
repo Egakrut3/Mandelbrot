@@ -1,7 +1,7 @@
 #include "Mandelbrot_run.h"
 #include <immintrin.h>
 
-// #define NO_DRAWING
+#define NO_DRAWING
 
 #if defined(NO_DRAWING)
 
@@ -15,7 +15,15 @@
 
 #define FINAL_CODE
 
-#define MANDELBROT_ITER		((size_t)0x20)
+#if defined(MANDELBROT_PACKED)
+
+#define MANDELBROT_ITER ((size_t)0x80)
+
+#else
+
+#define MANDELBROT_ITER ((size_t)0x100)
+
+#endif
 #define MANDELBROT_BORDER2	((GLfloat)4)
 static void store_BGR_color(size_t iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
@@ -176,9 +184,9 @@ int Mandelbrot_run() {
 	fprintf(output_ptr, "CPF\n");
 #endif
 
-	#define CYC_REFRESH_CNT ((size_t)0x10)
-	size_t	frames_cnt	= 0,
-		last_rep_cyc	= __rdtsc();
+	size_t last_rep_cyc = 0;
+	__asm__ volatile ("mfence" ::: "memory");
+	last_rep_cyc = __rdtsc();
 
 #if defined(NO_DRAWING)
 	while(1) {
@@ -192,22 +200,21 @@ int Mandelbrot_run() {
 		CHECK_PROC(Mandelbrot_glfw_refresh, win);
 	#endif
 
-		frames_cnt++;
-		if (frames_cnt == CYC_REFRESH_CNT) {
-			size_t		cur_cyc		= __rdtsc(),
-					pass_cyc	= cur_cyc - last_rep_cyc;
-			long double	CPF		= (long double)pass_cyc / (long double)CYC_REFRESH_CNT;
+		size_t cur_cyc = 0;
+		__asm__ volatile ("mfence" ::: "memory");
+		cur_cyc = __rdtsc();
 
-		#if defined(TESTING)
-			fprintf(output_ptr, "%.2Lf\n", CPF);
-			if (!--left_samples) { break; }
-		#else
-			fprintf(stderr, "%zu frames in %zu cycles = %.2Lf CPF\n", CYC_REFRESH_CNT, pass_cyc, CPF);
-		#endif
+		size_t	pass_cyc	= cur_cyc - last_rep_cyc;
 
-			frames_cnt	= 0;
-			last_rep_cyc	= __rdtsc();
-		}
+	#if defined(TESTING)
+		fprintf(output_ptr, "%zu\n", pass_cyc);
+		if (!--left_samples) { break; }
+	#else
+		fprintf(stderr, "%zu\n", pass_cyc);
+	#endif
+
+		__asm__ volatile ("mfence" ::: "memory");
+		last_rep_cyc	= __rdtsc();
 	}
 
 	CLEAR_RESOURCES();
