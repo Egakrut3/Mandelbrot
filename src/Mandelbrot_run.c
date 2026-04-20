@@ -1,7 +1,7 @@
 #include "Mandelbrot_run.h"
 #include <immintrin.h>
 
-#define NO_DRAWING
+// #define NO_DRAWING
 
 #if defined(NO_DRAWING)
 
@@ -210,7 +210,7 @@ int Mandelbrot_run() {
 		fprintf(output_ptr, "%zu\n", pass_cyc);
 		if (!--left_samples) { break; }
 	#else
-		fprintf(stderr, "%zu\n", pass_cyc);
+		// fprintf(stderr, "%zu\n", pass_cyc);
 	#endif
 
 		__asm__ volatile ("mfence" ::: "memory");

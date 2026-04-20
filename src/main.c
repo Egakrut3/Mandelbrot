@@ -2,7 +2,7 @@
 #include "Mandelbrot_run.h"
 
 // TODO - add my_functions
-// TODO - add Slow Draw
+// TODO - add switch SIMD
 
 int main() {
 	#define FINAL_CODE
