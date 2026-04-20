@@ -103,7 +103,7 @@ int Mandelbrot_run() {
 	context.h = DEFAULT_BUFF_H;
 
 #if defined(MANDELBROT_PACKED)
-	context.buff_w		= get_packed_aligned(context.w);
+	context.buff_w		= GET_PACKED_ALIGNED(context.w);
 	context.buff_size	= (size_t)(context.buff_w * context.h) * sizeof(*context.pixels);
 #else
 	context.buff_size = (size_t)(context.w * context.h) * sizeof(*context.pixels);
@@ -120,8 +120,6 @@ int Mandelbrot_run() {
 	context.scale = DEFAULT_SCALE * powf(SCALE_MLT, TEST_SCALE_CNT);
 	context.x_off = 0;
 	context.y_off = 0;
-
-	while (1) {
 #else
 	GLFWwindow *restrict win = nullptr;
 	CHECK_PROC(Mandelbrot_glfw_enter, &win, &context);
@@ -132,14 +130,46 @@ int Mandelbrot_run() {
 
 	update_pixels(&context);
 	CHECK_PROC(Mandelbrot_glfw_refresh, win);
+#endif
 
+#if defined(TESTING)
+	#define NEED_SAMPLES 0x80
+	size_t left_samples = NEED_SAMPLES;
+	fprintf(output_ptr, "CPF\n");
+#endif
+
+	#define CYC_REFRESH_CNT ((size_t)0x40)
+	size_t	frames_cnt	= 0,
+		last_rep_cyc	= __rdtsc();
+
+#if defined(NO_DRAWING)
+	while(1) {
+#else
 	while (!Mandelbrot_glfw_finish(win)) {
 #endif
+
 		update_pixels(&context);
 
 	#if !defined(NO_DRAWING)
 		CHECK_PROC(Mandelbrot_glfw_refresh, win);
 	#endif
+
+		frames_cnt++;
+		if (frames_cnt >= CYC_REFRESH_CNT) {
+			size_t		cur_cyc		= __rdtsc(),
+					pass_cyc	= cur_cyc - last_rep_cyc;
+			long double	CPF		= (long double)pass_cyc / (long double)frames_cnt;
+
+		#if defined(TESTING)
+			fprintf(output_ptr, "%.2Lf\n", CPF);
+			if (!(--left_samples)) { break; }
+		#else
+			fprintf(stderr, "%zu frames in %zu cycles = %.2Lf CPF\n", frames_cnt, pass_cyc, CPF);
+		#endif
+
+			frames_cnt		= 0;
+			last_rep_cyc	= __rdtsc();
+		}
 	}
 
 	CLEAR_RESOURCES();
