@@ -1,18 +1,20 @@
-INC_DIR = inc/
+INC_DIR		= inc/
 
 SRC_DIR		= src/
 C_SUF		= .c
 make_c_path	= $(addprefix $(SRC_DIR), $(addsuffix $(C_SUF),	$(1)))
 
 OBJ_DIR		= bin/
-OBJ_SUF		= .obj
+OBJ_SUF		= .o
 make_obj_path	= $(addprefix $(OBJ_DIR), $(addsuffix $(OBJ_SUF), $(1)))
 
-SRC		= Mandelbrot_GLFW Mandelbrot_run main
-#SLOW_SRC	= Slow_Mandelbrot main
+DEP_DIR		= dep/
+DEP_SUF		= .d
+make_dep_path	= $(addprefix $(DEP_DIR), $(addsuffix $(DEP_SUF), $(1)))
 
-TARGET		= Test.elf
-#SLOW_TARGET	= Slow_Test.elf
+SRC = Mandelbrot_GLFW Mandelbrot_run main
+
+TARGET = Test.elf
 
 C_OPTIONS	=	-D_DEBUG -ggdb3 -std=c23 -Ofast -mavx512f -Wall -Wextra -Waggressive-loop-optimizations -Wmissing-declarations -Wcast-align -Wcast-qual			\
 			-Wchar-subscripts -Wconversion -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op	\
@@ -24,34 +26,41 @@ C_OPTIONS	=	-D_DEBUG -ggdb3 -std=c23 -Ofast -mavx512f -Wall -Wextra -Waggressive
 CPP_OPTIONS	=	-Weffc++ -Wc++14-compat -Woverloaded-virtual -Wconditionally-supported -Wctor-dtor-privacy -Wnon-virtual-dtor -Wsign-promo -Wstrict-null-sentinel	\
 			-Wsuggest-override -Wno-literal-suffix -Wno-old-style-cast -fsized-deallocation
 
-.PHONY: all prepare test slow_test clean commit
+.PHONY: all prepare test clean commit
 
 all: test
 
 prepare:
-	@mkdir -p $(OBJ_DIR)
-
-make_c_obj = $(call make_obj_path, $(1)): $(call make_c_path, $(1)) | prepare;	\
-	@gcc $(C_OPTIONS) -I$(INC_DIR) -c $$< -o $$@
-
-$(foreach src, $(sort $(SRC) $(SLOW_SRC)), $(eval $(call make_c_obj, $(src))))
+	@mkdir -p $(OBJ_DIR) $(DEP_DIR)
 
 $(TARGET): $(call make_obj_path, $(SRC))
 	@gcc $(C_OPTIONS) $^ -lGL -lglfw -o $@
-
-$(SLOW_TARGET): $(call make_obj_path, $(SLOW_SRC))
-	@gcc $(C_OPTIONS) $^ -lGL -lglfw -o $@
+	@echo Compilation end
 
 test: $(TARGET)
-	@./$(TARGET)
-
-slow_test: $(SLOW_TARGET)
-	@prime-run ./$(SLOW_TARGET)
+	@prime-run ./$(TARGET)
 
 clean:
-	@rm -fr	$(OBJ_DIR) $(TARGET) $(SLOW_TARGET)
+	@rm -fr	$(OBJ_DIR) $(DEP_DIR) $(TARGET)
 
 commit:
 	@git add .
 	@git commit -m "$(MSG)"
 	@git push
+
+.SECONDEXPANSION:
+
+%$(DEP_SUF): $(call make_c_path, $$(*F)) | prepare
+	@rm -f $@
+	@gcc -MM $(C_OPTIONS) -I$(INC_DIR) $< > $@.$$$$;	\
+	sed 's,\($(*F)\.o\)[ :]*,\1 $@: ,g' < $@.$$$$ > $@;	\
+	rm $@.$$$$
+
+ifeq (, $(filter clean, $(MAKECMDGOALS)))
+include $(call make_dep_path, $(SRC))
+endif
+
+make_c_obj = $(call make_obj_path, $(1)): $(call make_c_path, $(1)) | prepare;	\
+	@gcc $(C_OPTIONS) -I$(INC_DIR) -c $$< -o $$@
+
+$(foreach src, $(sort $(SRC) $(SLOW_SRC)), $(eval $(call make_c_obj, $(src))))

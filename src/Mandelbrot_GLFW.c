@@ -6,8 +6,6 @@
 
 #endif
 
-#define MANDELBROT_PACKED
-
 #define GLFW_CHECK()								\
 do {										\
 	char const *str = nullptr;						\

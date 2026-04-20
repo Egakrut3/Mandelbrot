@@ -2,7 +2,6 @@
 #include <immintrin.h>
 
 // #define NO_DRAWING
-#define MANDELBROT_PACKED
 
 #if defined(NO_DRAWING)
 
@@ -18,7 +17,7 @@
 
 #define MANDELBROT_ITER		((size_t)0x20)
 #define MANDELBROT_BORDER2	((GLfloat)4)
-static void store_BGR_color(GLsizei iter, GLfloat dest[3]) { // TODO - restrict
+static void store_BGR_color(size_t iter, GLfloat dest[3]) {
 	GLfloat	t1 = (GLfloat)iter / MANDELBROT_ITER,
 		t0 = 1 - t1;
 	dest[0] = 1		* t0 * t0 * t0;
@@ -43,16 +42,16 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 		y_inc		= _mm512_set1_ps(context_ptr->scale),
 		start_x		= _mm512_fmadd_ps(prog, y_inc, _mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
 		cur_y		= _mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
-	__m512i iter_inc	= _mm512_set1_epi32(1);
+	__m512i	iter_inc	= _mm512_set1_epi32(1);
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++, cur_y = _mm512_add_ps(cur_y, y_inc)) {
 		__m512 cur_x = start_x;
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it += PACKED_CNT, cur_x = _mm512_add_ps(cur_x, x_inc)) {
-			__m512	x0			= cur_x,
+			__m512		x0			= cur_x,
 					x			= x0,
 					y0			= cur_y,
 					y			= y0;
-			__m512i	iter		= _mm512_setzero_epi32();
-			__mmask16 is_small	= 0xFF'FF;
+			__m512i		iter		= _mm512_setzero_epi32();
+			__mmask16	is_small	= 0xFF'FF;
 			for (size_t i = 0; i < MANDELBROT_ITER && is_small; i++, iter = _mm512_mask_add_epi32(iter, is_small, iter, iter_inc)) {
 				__m512 abs2 = _mm512_mul_ps(x, x);
 				abs2 = _mm512_fmadd_ps(y, y, abs2);
@@ -60,7 +59,7 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 				is_small &= new_mask;
 
 				__m512	new_x = _mm512_fmadd_ps(x, x, x0),
-						new_y = _mm512_fmadd_ps(x, y, y0);
+					new_y = _mm512_fmadd_ps(x, y, y0);
 				new_x = _mm512_fnmadd_ps(y, y, new_x);
 				new_y = _mm512_fmadd_ps(x, y, new_y);
 
@@ -80,6 +79,48 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 	}
 
 	CLEAR_RESOURCES();
+}
+
+#else
+
+struct Complex {
+	GLfloat	x,
+		y;
+};
+
+static struct Complex add_complex(struct Complex a, struct Complex b) {
+	return (struct Complex){a.x + b.x,
+				a.y + b.y};
+}
+
+static struct Complex mlt_complex(struct Complex a, struct Complex b) {
+	return (struct Complex){a.x * b.x - a.y * b.y,
+				a.x * b.y + a.y * b.x};
+}
+
+static GLfloat abs2(struct Complex z) {
+	return z.x * z.x + z.y * z.y;
+}
+
+static void update_pixels(struct Mandelbrot_context *context_ptr) {
+	assert(context_ptr);
+	
+	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++) {
+		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it++) {
+			struct Complex	z0	= (struct Complex){	(GLfloat)(x_it - context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off,
+									(GLfloat)(y_it - context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off},
+					z	= z0;
+
+			size_t iter = 0;
+			for (; iter < MANDELBROT_ITER; iter++) {
+				if (abs2(z) > MANDELBROT_BORDER2) { break; }
+				z = add_complex(mlt_complex(z, z), z0);
+			}
+
+			size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it);
+            		store_BGR_color(iter, context_ptr->pixels[cur_ind]);
+		}
+	}
 }
 
 #endif
@@ -127,13 +168,10 @@ int Mandelbrot_run() {
 	#define FINAL_CODE		\
 	Mandelbrot_glfw_leave(win);	\
 	fclose(output_ptr);
-
-	update_pixels(&context);
-	CHECK_PROC(Mandelbrot_glfw_refresh, win);
 #endif
 
 #if defined(TESTING)
-	#define NEED_SAMPLES 0x80
+	#define NEED_SAMPLES 0x5
 	size_t left_samples = NEED_SAMPLES;
 	fprintf(output_ptr, "CPF\n");
 #endif
@@ -167,7 +205,7 @@ int Mandelbrot_run() {
 			fprintf(stderr, "%zu frames in %zu cycles = %.2Lf CPF\n", frames_cnt, pass_cyc, CPF);
 		#endif
 
-			frames_cnt		= 0;
+			frames_cnt	= 0;
 			last_rep_cyc	= __rdtsc();
 		}
 	}

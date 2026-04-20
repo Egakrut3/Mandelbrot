@@ -98,17 +98,17 @@ static void store_BGR_color(size_t iter, GLfloat dest[3]) {
 
 struct Complex {
 	GLfloat	x,
-			y;
+		y;
 };
 
 static struct Complex add_complex(struct Complex a, struct Complex b) {
 	return (struct Complex){a.x + b.x,
-							a.y + b.y};
+				a.y + b.y};
 }
 
 static struct Complex mlt_complex(struct Complex a, struct Complex b) {
 	return (struct Complex){a.x * b.x - a.y * b.y,
-							a.x * b.y + a.y * b.x};
+				a.x * b.y + a.y * b.x};
 }
 
 static GLfloat abs2(struct Complex z) {
@@ -121,8 +121,8 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++) {
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it++) {
 			struct Complex	z0 = (struct Complex){	(GLfloat)(x_it - context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off,
-													(GLfloat)(y_it - context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off},
-							z = z0;
+								(GLfloat)(y_it - context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off},
+					z = z0;
 
 			size_t iter = 0;
 			for (; iter < MANDELBROT_ITER; iter++) {
@@ -131,7 +131,7 @@ static void update_context(struct Mandelbrot_context *context_ptr) {
 			}
 
 			size_t cur_ind = (size_t)(y_it * context_ptr->w + x_it);
-            store_BGR_color(iter, context_ptr->pixels[cur_ind]);
+            		store_BGR_color(iter, context_ptr->pixels[cur_ind]);
 		}
 	}
 }
