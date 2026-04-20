@@ -73,7 +73,7 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 			_mm512_store_epi32(iter_arr, iter);
 			for (size_t i = 0; i < PACKED_CNT; i++) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->buff_w + x_it) + i;
-				store_BGR_color(iter_arr[i], context_ptr->pixels[cur_ind]);
+				store_BGR_color((size_t)iter_arr[i], context_ptr->pixels[cur_ind]);
 			}
 		}
 	}
@@ -171,12 +171,12 @@ int Mandelbrot_run() {
 #endif
 
 #if defined(TESTING)
-	#define NEED_SAMPLES 0x5
+	#define NEED_SAMPLES 0x100
 	size_t left_samples = NEED_SAMPLES;
 	fprintf(output_ptr, "CPF\n");
 #endif
 
-	#define CYC_REFRESH_CNT ((size_t)0x40)
+	#define CYC_REFRESH_CNT ((size_t)0x10)
 	size_t	frames_cnt	= 0,
 		last_rep_cyc	= __rdtsc();
 
@@ -193,16 +193,16 @@ int Mandelbrot_run() {
 	#endif
 
 		frames_cnt++;
-		if (frames_cnt >= CYC_REFRESH_CNT) {
+		if (frames_cnt == CYC_REFRESH_CNT) {
 			size_t		cur_cyc		= __rdtsc(),
 					pass_cyc	= cur_cyc - last_rep_cyc;
-			long double	CPF		= (long double)pass_cyc / (long double)frames_cnt;
+			long double	CPF		= (long double)pass_cyc / (long double)CYC_REFRESH_CNT;
 
 		#if defined(TESTING)
 			fprintf(output_ptr, "%.2Lf\n", CPF);
-			if (!(--left_samples)) { break; }
+			if (!--left_samples) { break; }
 		#else
-			fprintf(stderr, "%zu frames in %zu cycles = %.2Lf CPF\n", frames_cnt, pass_cyc, CPF);
+			fprintf(stderr, "%zu frames in %zu cycles = %.2Lf CPF\n", CYC_REFRESH_CNT, pass_cyc, CPF);
 		#endif
 
 			frames_cnt	= 0;

@@ -1,2 +1,0 @@
-main.o: src/main.c inc/Common.h inc/Common_declarations.h \
- inc/Mandelbrot_run.h inc/Common.h inc/Mandelbrot_common.h

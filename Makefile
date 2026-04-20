@@ -38,7 +38,7 @@ $(TARGET): $(call make_obj_path, $(SRC))
 	@echo Compilation end
 
 test: $(TARGET)
-	@prime-run ./$(TARGET)
+	@prime-run taskset -c 15 ./$(TARGET)
 
 clean:
 	@rm -fr	$(OBJ_DIR) $(DEP_DIR) $(TARGET)
@@ -53,7 +53,7 @@ commit:
 %$(DEP_SUF): $(call make_c_path, $$(*F)) | prepare
 	@rm -f $@
 	@gcc -MM $(C_OPTIONS) -I$(INC_DIR) $< > $@.$$$$;	\
-	sed 's,\($(*F)\.o\)[ :]*,\1 $@: ,g' < $@.$$$$ > $@;	\
+	sed 's,\($(*F)\)\.o[ :]*,$(call make_obj_path, \1) $@: ,g' < $@.$$$$ > $@;	\
 	rm $@.$$$$
 
 ifeq (, $(filter clean, $(MAKECMDGOALS)))
@@ -63,4 +63,4 @@ endif
 make_c_obj = $(call make_obj_path, $(1)): $(call make_c_path, $(1)) | prepare;	\
 	@gcc $(C_OPTIONS) -I$(INC_DIR) -c $$< -o $$@
 
-$(foreach src, $(sort $(SRC) $(SLOW_SRC)), $(eval $(call make_c_obj, $(src))))
+$(foreach src, $(SRC), $(eval $(call make_c_obj, $(src))))
