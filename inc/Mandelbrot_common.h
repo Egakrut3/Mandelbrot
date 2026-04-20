@@ -4,7 +4,7 @@
 #include "Common.h"
 #include <GL/gl.h>
 
-#define TESTING
+// #define TESTING
 #define MANDELBROT_PACKED
 
 #define DEFAULT_SCALE	((GLfloat)0.003)
