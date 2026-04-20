@@ -35,7 +35,7 @@ static void store_BGR_color(size_t iter, GLfloat dest[3]) {
 	CLEAR_RESOURCES();
 }
 
-#if defined (MANDELBROT_PACKED)
+#if defined(MANDELBROT_PACKED)
 
 static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 	assert(context_ptr);
