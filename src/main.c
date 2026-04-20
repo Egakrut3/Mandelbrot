@@ -1,10 +1,12 @@
 #include "Common.h"
-#include "Mandelbrot.h"
+#include "Mandelbrot_run.h"
+
+// TODO - add my_functions
 
 int main() {
 	#define FINAL_CODE
 
-	CHECK_FUNC(run_Mandelbrot);
+	CHECK_PROC(Mandelbrot_run);
 
 	return 0;
 

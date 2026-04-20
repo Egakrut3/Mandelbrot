@@ -1,4 +1,5 @@
+*.old
 bin/
-Test
-Slow_Test
+*.elf
+
 *.csv

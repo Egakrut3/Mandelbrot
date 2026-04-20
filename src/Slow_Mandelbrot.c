@@ -35,15 +35,7 @@ static void error_callback(int err, char const *desc) {
 
 #endif
 
-struct Mandelbrot_context {
-	size_t	buff_size;
-	GLsizei	w,
-			h;
-	GLfloat	(*pixels)[3],
-			scale,
-			x_off,
-			y_off;
-};
+
 
 #define DEFAULT_SCALE	((GLfloat)0.003)
 #define SCALE_MLT		((GLfloat)1.1)
