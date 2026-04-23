@@ -51,7 +51,9 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 		start_x		= _mm512_fmadd_ps(prog, y_inc, _mm512_set1_ps((GLfloat)(-context_ptr->w / 2) * context_ptr->scale + context_ptr->x_off)),
 		cur_y		= _mm512_set1_ps((GLfloat)(-context_ptr->h / 2) * context_ptr->scale + context_ptr->y_off);
 	__m512i	iter_inc	= _mm512_set1_epi32(1);
+
 	for (GLsizei y_it = 0; y_it < context_ptr->h; y_it++, cur_y = _mm512_add_ps(cur_y, y_inc)) {
+
 		__m512 cur_x = start_x;
 		for (GLsizei x_it = 0; x_it < context_ptr->w; x_it += PACKED_CNT, cur_x = _mm512_add_ps(cur_x, x_inc)) {
 			__m512		x0			= cur_x,
@@ -60,9 +62,11 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 					y			= y0;
 			__m512i		iter		= _mm512_setzero_epi32();
 			__mmask16	is_small	= 0xFF'FF;
+			
 			for (size_t i = 0; i < MANDELBROT_ITER && is_small; i++, iter = _mm512_mask_add_epi32(iter, is_small, iter, iter_inc)) {
 				__m512 abs2 = _mm512_mul_ps(x, x);
 				abs2 = _mm512_fmadd_ps(y, y, abs2);
+
 				__mmask16 new_mask = _mm512_cmp_ps_mask(abs2, border2, _CMP_LE_OQ);
 				is_small &= new_mask;
 
@@ -77,7 +81,7 @@ static void update_pixels(struct Mandelbrot_context *restrict context_ptr) {
 				y = _mm512_fmadd_ps(new_x, new_y, y);
 			}
 
-			alignas(alignof(iter)) GLsizei iter_arr[PACKED_CNT];
+			alignas(alignof(iter)) GLsizei iter_arr[PACKED_CNT] = {};
 			_mm512_store_epi32(iter_arr, iter);
 			for (size_t i = 0; i < PACKED_CNT; i++) {
 				size_t cur_ind = (size_t)(y_it * context_ptr->buff_w + x_it) + i;
